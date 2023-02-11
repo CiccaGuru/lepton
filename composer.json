@@ -1,13 +1,13 @@
 {
     "name": "aisf/lepton",
     "description": "AISF MVC Php Framework",
-    "type": "library",
+    "type": "package",
     "require": {
-        "twig/twig": "^3.5",
         "phpmailer/phpmailer": "^6.7",
         "satispay/gbusiness-api-php-sdk": "^1.3",
         "paypal/paypal-payouts-sdk": "^1.0",
-        "stripe/stripe-php": "^10.5"
+        "stripe/stripe-php": "^10.5",
+        "filp/whoops": "^2.14"
     },
     "license": "GNU-GPLv3",
     "autoload": {
@@ -20,5 +20,11 @@
             "name": "Roberto Ciccarelli",
             "email": "robyciccarelli.rc@gmail.com"
         }
-    ]
+    ],
+    "config": {
+        "vendor-dir": "libs",
+        "allow-plugins": {
+            "composer/installers": true
+        }
+    }
 }
