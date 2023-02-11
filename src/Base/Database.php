@@ -46,7 +46,7 @@ class Database {
   }
 
 
-	public function fetch_all($callback = null) {
+  public function fetch_all($callback = null) {
     $params = array();
     $row = array();
     $meta = $this->query->result_metadata();

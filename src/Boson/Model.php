@@ -5,18 +5,33 @@ use Lepton\Boson\DataTypes;
 
 
 abstract class Model{
-  public static $connection;
+
   private array $fields;
+  private DataTypes\PrimaryKey $pk;
+  private string $pkName;
+  private bool $isLoadedFromDb;
+  private array $editedFields;
+  protected $tableName;
 
   function __construct(){
 
     $this->fields = array();
+    $this->editedFields = array();
+
+    $this->checkTableName();
     $this->checkFieldsAreProtected();
     $this->extractFieldsFromAttributes();
+    $this->isLoadedFromDb = false;
     //$this->checkFields();
   }
 
 
+  private function checkTableName(){
+    if(!isset($this->tableName)){
+      $class = new \ReflectionClass(get_class($this));
+      throw new Exceptions\TableNameNotSetException($class);
+    }
+  }
 
   private function extractFieldsFromAttributes(){
     $maybeFields = (new \ReflectionClass(get_class($this)))->getProperties(
@@ -27,7 +42,16 @@ abstract class Model{
     foreach($maybeFields as $maybeField){
 
       if($fieldType = $this->getFieldType($maybeField)){
-        $this->fields[$maybeField->getName()] = $fieldType->newInstance();
+        if($fieldType->getName() == DataTypes\PrimaryKey::class ){
+          if(isset($this->pk) ){
+            throw new Exceptions\MultiplePrimaryKeyException($maybeField);
+          } else {
+            $this->pk = $fieldType->newInstance();
+            $this->pkName = $maybeField->getName();
+          }
+        } else {
+          $this->fields[$maybeField->getName()] = $fieldType->newInstance();
+        }
       }
     }
   }
@@ -90,13 +114,24 @@ abstract class Model{
 
 
 
+  public function save(){
+    $values = array_map(fn($value) => $this->$value, $this->editedFields);
+    $toEdit = array_combine($this->editedFields, $values);
+    $queryBuild = new QueryBuilder($this->tableName, $toEdit);
+    if(!$this->isLoadedFromDb){
+      $queryBuild->insert();
+    } else {
+      $queryBuild->update($this->{$this->pkName});
+    }
+  }
 
   public function __set($property, $value){
-    echo $property." ".$value."<br/>";
     if(array_key_exists($property, $this->fields) ){
-      if($this->fields[$property]->validate($value))
+      if($this->fields[$property]->validate($value)){
+        $this->editedFields[] = $property;
+        $this->editedFields = array_unique($this->editedFields);
         $this->$property = $value;
-      else{
+      } else{
         $className = get_class($this);
         throw new Exceptions\InvalidFieldException("Invalid value for field \"$property\" of $className: $value ");
       }
@@ -107,4 +142,14 @@ abstract class Model{
     }
   }
 
+
+  public function __toString(){
+    $toPrint = "Model ".get_class($this).":<br/>";
+    $toPrint .= $this->pkName." [Primary Key] => ".$this->{$this->pkName}."<br/>";
+    foreach($this->fields as $k => $field){
+      $toPrint .= "$k => ".$this->$k."<br/>";
+    }
+
+    return $toPrint;
+  }
 }
