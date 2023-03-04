@@ -1,2 +1,4 @@
 config/*
 /libs/
+composer.phar
+/vendor/
