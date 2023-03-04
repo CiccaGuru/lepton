@@ -339,11 +339,15 @@ abstract class Model{
 
   public static function get(...$filters): Model{
 
-    $querySet = static::filter(...$filters)->do();
+    if((count($filters) == 1) && array_key_first($filters)  == 0){
+      $filters = array((new static())->pkName => $filters[0]);
+    }
 
+    $querySet = static::filter(...$filters);
     $result = $querySet->do();
-
-    if( $result->count() > 1){
+    if($result->count() == 0){
+      throw new \Exception("No result found");
+    } else if( $result->count() > 1){
       throw new \Exception("Only one result allowed when using get, multiple obtained");
     } else {
       foreach($result as $model){
