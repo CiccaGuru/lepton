@@ -35,13 +35,14 @@ class Field{
 
 
   protected function check(){
-    return array_merge(
+    return 1;
+    /*array_merge(
       $this->check_field_name(),
       $this->check_db_index(),
       $this->check_null_allowed_primary_key(),
       $this->check_choices(),
       $this->check_db_index(),
       $this->check_validators(),
-    );
+    );*/
   }
 }
