@@ -79,6 +79,7 @@ class Route{
   public static function match($pattern, $callback)
   {
       $parameters = array();
+
       if(self::patternMatch($pattern, $parameters)){
 
         if(is_callable($callback)){
@@ -93,8 +94,7 @@ class Route{
             throw new \Lepton\Exceptions\ControllerNotFoundException("Invalid Controller and/or method in routes.php");
           }
 
-          call_user_func_array(array($controller, $method), $parameters);
-
+          $controller::$method(...$parameters);
         }
       }
 

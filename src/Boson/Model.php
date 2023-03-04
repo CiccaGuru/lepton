@@ -2,17 +2,51 @@
 namespace Lepton\Boson;
 use Lepton\Exceptions;
 use Lepton\Boson\DataTypes;
+use Lepton\Base\Application;
 
 
 abstract class Model{
 
+  /**
+   * The fields for the model. This array stores the actual field values.
+   * @var array
+   */
   private array $fields;
-  private DataTypes\PrimaryKey $pk;
-  private string $pkName;
-  private bool $isLoadedFromDb;
-  private array $editedFields;
-  protected $tableName;
 
+  /**
+   * The primary key. It's not the actual value
+   * @var DataTypes\PrimaryKey
+   */
+  private DataTypes\PrimaryKey $pk;
+
+
+  /**
+   * The name of the field containing the actual Primary Key value
+   * @var string
+   */
+  private string $pkName;
+
+
+  /**
+   * The list of edited field since last database sync.
+   * @var array
+   */
+  private array $editedFields;
+
+  /**
+   * The name of the table in the database.
+   * It can be overloaded by the implementation.
+   *
+   * @var string
+   */
+  protected static $tableName;
+
+
+  /**
+   * Create a new Model instance
+   *
+   * @return void
+   */
   function __construct(){
 
     $this->fields = array();
@@ -21,18 +55,36 @@ abstract class Model{
     $this->checkTableName();
     $this->checkFieldsAreProtected();
     $this->extractFieldsFromAttributes();
-    $this->isLoadedFromDb = false;
-    //$this->checkFields();
+    return $this;
   }
 
-
+  /**
+   * Check if table name is set. If not set, get it by transforming class name to sneak-case
+   * and putting an underscore _ between words
+   *
+   * @return void
+   */
   private function checkTableName(){
-    if(!isset($this->tableName)){
+    if(!isset(static::$tableName)){
       $class = new \ReflectionClass(get_class($this));
-      throw new Exceptions\TableNameNotSetException($class);
+      try{
+        $className =  explode("\\", $class->getName());
+        static::$tableName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', end($className)));
+      } catch (\Exception $e) {
+        throw new Exceptions\TableNameNotSetException($class);
+      }
     }
   }
 
+
+  /**
+   * Analyze all the protected properties of the Model.
+   *
+   * If a property is an instance of a class extending Lepton\Boson\DataTypes\Field,
+   * treat it as a field.
+   *
+   * @return void
+   */
   private function extractFieldsFromAttributes(){
     $maybeFields = (new \ReflectionClass(get_class($this)))->getProperties(
       \ReflectionProperty::IS_PROTECTED
@@ -42,7 +94,11 @@ abstract class Model{
     foreach($maybeFields as $maybeField){
 
       if($fieldType = $this->getFieldType($maybeField)){
+
+        // Check if it's PrimaryKey
         if($fieldType->getName() == DataTypes\PrimaryKey::class ){
+
+          // A model must have only one Primary Key
           if(isset($this->pk) ){
             throw new Exceptions\MultiplePrimaryKeyException($maybeField);
           } else {
@@ -54,12 +110,23 @@ abstract class Model{
         }
       }
     }
+
+    // A model must have a PrimaryKey
+    if(!isset($this->pk)){
+      throw new Exceptions\NoPrimaryKeyException(new \ReflectionClass(get_class($this)));
+    }
   }
 
 
-
-
-  private function getFieldType($prop){
+  /**
+   * Analyze a property's attributes to check if it's a field.
+   * If it's a field, returns the field type.
+   * If it's not, returns true.
+   *
+   * @param \ReflectionProperty $prop
+   * @return bool|Object
+   */
+  private function getFieldType($prop) {
 
     $attributes = $prop->getAttributes();
     $fieldType = NULL;
@@ -71,6 +138,7 @@ abstract class Model{
     foreach($attributes as $k => $attribute){
 
       if(is_subclass_of(($attribute->getName()), DataTypes\Field::class)){
+        // A field should have only one field type
         if(is_null($fieldType))
           $fieldType =  $attribute;
         else
@@ -81,7 +149,11 @@ abstract class Model{
   }
 
 
-
+  /**
+   * Check that all the attributes that have a Field attribute are declared as protected
+   *
+   * @return void
+   */
   private function checkFieldsAreProtected(){
     $properties = (new \ReflectionClass(get_class($this)))->getProperties(
       \ReflectionProperty::IS_PUBLIC |
@@ -103,8 +175,15 @@ abstract class Model{
 
 
 
-
-  public function __get($property){
+  /**
+   * When a Field is requested, return the corresponding element in $this->fields
+   *
+   * @param string $property
+   * The property name
+   *
+   * @return mixed
+   */
+  public final function __get(string $property){
     $childClass = get_class($this);
     if(property_exists($childClass, $property))
       return $this->$property;
@@ -112,20 +191,19 @@ abstract class Model{
       throw new Exceptions\FieldNotFoundException("Model '$childClass' has no field '$property'.");
   }
 
-
-
-  public function save(){
-    $values = array_map(fn($value) => $this->$value, $this->editedFields);
-    $toEdit = array_combine($this->editedFields, $values);
-    $queryBuild = new QueryBuilder($this->tableName, $toEdit);
-    if(!$this->isLoadedFromDb){
-      $queryBuild->insert();
-    } else {
-      $queryBuild->update($this->{$this->pkName});
-    }
-  }
-
-  public function __set($property, $value){
+  /**
+   * When setting a Field, check if the provided $value is valid.
+   * Then set the corresponding element of $this->checkFieldsAreProtected
+   *
+   * @param string $property
+   * The property name
+   *
+   * @param mixed $value
+   * The value to be set
+   *
+   * @return void
+   */
+  public final function __set(string $property, mixed $value){
     if(array_key_exists($property, $this->fields) ){
       if($this->fields[$property]->validate($value)){
         $this->editedFields[] = $property;
@@ -143,7 +221,7 @@ abstract class Model{
   }
 
 
-  public function __toString(){
+  public final function __toString(){
     $toPrint = "Model ".get_class($this).":<br/>";
     $toPrint .= $this->pkName." [Primary Key] => ".$this->{$this->pkName}."<br/>";
     foreach($this->fields as $k => $field){
@@ -152,4 +230,138 @@ abstract class Model{
 
     return $toPrint;
   }
+
+
+
+  public final function getPk(){
+    return $this->{$this->pkName};
+  }
+
+  public final static function getTableName(){
+    return static::$tableName;
+  }
+
+
+  /**
+   * Statically initialize the model
+   *
+   * @param mixed ...$args
+   * The values to be put in the fields.
+   *
+   * @return object $model
+   * The model
+   */
+
+  public static function new(...$args){
+    $class = new \ReflectionClass(get_called_class());
+    $model = new ($class->getName());
+
+    foreach ($args as $prop => $value){
+      $model->$prop = $value;
+    }
+
+    return $model;
+  }
+
+
+  /*
+  ======================================================================================
+  ***************************** DATABASE INTERACTION ***********************************
+  ======================================================================================
+  */
+
+
+  /**
+   * Save the model to the database.
+   * This function is just a wrapper around insert and update.
+   *
+   * @return void
+   */
+  public final function save(){
+
+    // If there's a primary key value, try to update
+    if(isset($this->{$this->pkName}) && $this->update()){
+      $this->editedFields = array();
+      return;
+    }
+
+    $this->{$this->pkName} = $this->insert();
+
+    // All fields are now saved
+    $this->editedFields = array();
+  }
+
+
+  /**
+   * Update the data in the database using prepared queries.
+   *
+   * @return bool
+  */
+  private function update(){
+    $db = Application::getDb();
+
+    $values = array_map(fn($value) => $this->$value, $this->editedFields);
+    array_push($values, $this->getPk());
+
+    $fieldsString = implode(", ", array_map(fn($value) => "$value = ?", $this->editedFields));
+    $query = sprintf("UPDATE`%s` SET %s WHERE %s = ?", static::$tableName, $fieldsString,  $this->pkName);
+
+    $result = $db->query($query, ...$values);
+    return $result->affected_rows();
+  }
+
+
+
+  /**
+   * Insert the data in the database using prepared queries.
+   *
+   * @return int
+   * Last inserted id
+   */
+  private function insert(){
+
+
+    $db = Application::getDb();
+
+    $values = array_map(fn($value) => $this->$value, $this->editedFields);
+
+    $fieldsString = implode(", ",  $this->editedFields);
+    $placeholders = implode(", ", array_fill(0, count( $this->editedFields), "?"));
+    $query = sprintf("INSERT INTO `%s` (%s) VALUES (%s)", static::$tableName, $fieldsString, $placeholders);
+
+    $result = $db->query($query, ...$values);
+
+    return $result->last_insert_id();
+  }
+
+
+
+
+  public static function get(...$filters): Model{
+
+    $querySet = static::filter(...$filters)->do();
+
+    $result = $querySet->do();
+
+    if( $result->count() > 1){
+      throw new \Exception("Only one result allowed when using get, multiple obtained");
+    } else {
+      foreach($result as $model){
+        return $model;
+      }
+    }
+
+  }
+
+  /**
+   *
+   */
+  public static final function __callStatic(string $name, iterable $arguments): QuerySet
+  {
+    $querySet = new QuerySet(static::class);
+    $querySet->$name(...$arguments);
+    return $querySet;
+  }
+
+
 }

@@ -16,7 +16,7 @@ class Database {
 		$this->connection->set_charset($charset);
 	}
 
-  public function query($query, ...$args) {
+  public function query($query, &...$args) {
     if(!$this->query_closed){
       $this->query_closed = TRUE;
       $this->query->close();
@@ -24,15 +24,8 @@ class Database {
 		if ($this->query = $this->connection->prepare($query)) {
       if(count($args)){
         $types = implode(array_map(array($this, '_gettype'), $args));
-        $args_ref = array();
-        foreach($args as $k => &$arg){
-          $args_ref[] = &$arg;
-        }
-
-        array_unshift($args_ref, $types);
-        call_user_func_array(array($this->query, 'bind_param'), $args_ref);
+        $this->query->bind_param($types, ...$args);
       }
-
 
       $this->query->execute();
       if ($this->query->errno) {
@@ -53,7 +46,8 @@ class Database {
     while ($field = $meta->fetch_field()) {
         $params[] = &$row[$field->name];
     }
-    call_user_func_array(array($this->query, 'bind_result'), $params);
+    $this->query->bind_result(...$params);
+
     $result = array();
     while ($this->query->fetch()) {
       $r = array();
@@ -61,7 +55,7 @@ class Database {
         $r[$key] = $val;
       }
       if ($callback != null && is_callable($callback)) {
-        $value = call_user_func($callback, $r);
+        $value = $callback($r);//call_user_func($callback, $r);
         if ($value == 'break') break;
       } else {
         $result[] = $r;
@@ -78,7 +72,7 @@ class Database {
     while ($field = $meta->fetch_field()) {
       $params[] = &$row[$field->name];
     }
-    call_user_func_array(array($this->query, 'bind_result'), $params);
+    $this->query->bind_result(...$params);
     $result = array();
 		while ($this->query->fetch()) {
 			foreach ($row as $key => $val) {
@@ -87,6 +81,13 @@ class Database {
 		}
 		return $result;
 	}
+
+  public function fetch_result(){
+		return $this->query->get_result();
+  }
+
+
+
 
 	public function close() {
 		return $this->connection->close();
@@ -107,7 +108,7 @@ class Database {
 
   public function error($error) {
     if ($this->show_errors) {
-        exit($error);
+        die($error);
     }
   }
 
