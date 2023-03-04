@@ -336,6 +336,17 @@ abstract class Model{
 
 
 
+  /**
+   * Get a unique result from the database.
+   *
+   * @param mixed $filters
+   * The filters to be applied.  If $filters has only one element and no key, it is
+   * supposed to be the primary key.
+   *
+   * @return Model
+   * The model fulfilling the filters
+   */
+
 
   public static function get(...$filters): Model{
 
@@ -358,7 +369,16 @@ abstract class Model{
   }
 
   /**
+   * Provide an interface to call the corresponding function of QuerySet
    *
+   * @param string $name
+   * The name of the function to be called
+   *
+   * @param iterable $arguments
+   * The arguments to be passed to the function.
+   *
+   * @return QuerySet
+   * The QuerySet that represents the result.
    */
   public static final function __callStatic(string $name, iterable $arguments): QuerySet
   {
