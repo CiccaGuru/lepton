@@ -14,33 +14,88 @@ use mysqli_stmt;
 class QuerySet
   implements \Iterator, \ArrayAccess{
 
+  // Variables used for Iterator implementation
+
+  /**
+   * The index of the current element in iteration
+   *
+   * @var int
+   */
   private int $index;
+
+  /**
+   * The current element in iteration
+   *
+   * @var mixed
+   */
   private mixed $current;
+
+  /**
+   * Check is iteration is valid
+   *
+   * @var bool
+   */
   private bool $valid;
 
 
+  /**
+   * Array containing the filters to use in the WHERE clause of the query
+   *
+   * @var array
+   */
   public array $filters;
+
+  /**
+   * Other modifiers for the query (e.g.) GROUP BY, ORDER BY
+   *
+   * @var array
+   */
   public array $modifiers;
+
+  /**
+   * Dictionary between operator after __ in filter name and MySql operators
+   * Every element has a key, corresponding to the string after __ in filter name.
+   * Every element is an array of two element: the first has key "operator" and the value
+   * is a string corresponding to the MySql operator; the second is an inline function
+   * that accepts a parameter (the value) and returns a string corresponding to the r
+   * right-hand side of the statament.
+   * @var array
+   */
   private array $lookup_map;
 
+
+  /**
+   * If query is executed, contains the mysqli_result object
+   * If query is not executed, is NULL.
+   *
+   * @var \mysqli_result
+   */
   private \mysqli_result $result;
+
+  /**
+   * If query is executed, contains the cached values (that is, the values already
+   * retrieved from database).
+   * If query is not executed, is NULL
+   *
+   * @var array
+   */
   private array $cache;
 
   public function __construct(protected string $model){
     $this->lookup_map = array(
       "equals" => [
-          "operator" => "=",
-          "rhs" => fn($x) =>  $x
-         ],
+        "operator" => "=",
+        "rhs" => fn($x) =>  $x
+      ],
       "startswith" => [
-          "operator" => "LIKE",
-          "rhs" => fn($x) =>  sprintf('%s%%', $x)
-        ],
+        "operator" => "LIKE",
+        "rhs" => fn($x) =>  sprintf('%s%%', $x)
+      ],
 
       "endswith" => [
-          "operator" => "LIKE",
-          "rhs" => fn($x) => sprintf('%%%s', $x)
-        ],
+        "operator" => "LIKE",
+        "rhs" => fn($x) => sprintf('%%%s', $x)
+      ],
 
       "contains" => [
         "operator" => "LIKE",
@@ -82,19 +137,44 @@ class QuerySet
   ================================== ITERATOR ==========================================
   */
 
-
+  /**
+   * Implements \Iterator interface.
+   *
+   * @return mixed
+   * The current element of iteration
+   */
   public function current(): mixed{
     return $this->current;
   }
 
+
+  /**
+   * Implements \Iterator interface.
+   *
+   * @return mixed
+   * The key of the current element of iteration
+   */
   public function key(): mixed{
     return $this->index;
   }
 
+  /**
+   * Implements \Iterator interface.
+   * Gets next element of iteration.
+   *
+   * @return void
+   */
   public function next(): void{
     $this->fetchNext();
   }
 
+
+  /**
+   * Implements \Iterator interface.
+   * Rewinds the iteration.
+   *
+   * @return void
+   */
   public function rewind(): void{
     $this->index = -1;
     if(! isset($this->result)){
@@ -104,17 +184,37 @@ class QuerySet
     $this->fetchNext();
   }
 
+
+  /**
+   * Implements \Iterator interface
+   *
+   * @return bool
+   * Whether the iteration is valid or not
+   */
+
   public function valid(): bool{
     return $this->valid;
   }
 
 
 
-  protected function fetchNext(){
+  /**
+   * Performs actual iteration step
+   *
+   *  @return void
+   */
+  protected function fetchNext() : void{
+    // Get next row of the query result
     $items = $this->result->fetch_assoc();
+
+    // If no element is retrieved, then iteration is not valid
     $this->valid = !is_null(($items));
+
+    // If iteration is valid, update $this->current, $this->index
     $this->current = $this->valid ? ($this->model)::new(...$items) : NULL;
     $this->index = $this->valid ? $this->current->getPk() : -1;
+
+    // Cache the retrieved element
     $this->cache[$this->index] = $this->current;
   }
 
@@ -127,6 +227,18 @@ class QuerySet
   */
 
 
+
+  /**
+   * Implements \ArrayAccess interface.
+   * Verifies if a key exists or not. If iteration is not started yet, throws an
+   * Exception.
+   *
+   * @param mixed $offset
+   * The key to verify
+   *
+   * @return bool
+   * Whether the key exists
+   */
   public function offsetExists(mixed $offset): bool{
     if(isset($this->result)){
       return array_key_exists($offset, $this->cache);
@@ -136,6 +248,16 @@ class QuerySet
   }
 
 
+
+  /**
+   * Implements \ArrayAccess interface.
+   * Gets the element corresponding to the given key.
+   *
+   * @param mixed $offset
+   * The key of the element to retrieve
+   *
+   * @return mixed
+   */
   public function  offsetGet(mixed $offset): mixed{
     if(isset($this->result)){
       return $this->cache[$offset];
@@ -144,10 +266,18 @@ class QuerySet
     }
   }
 
+
+  /**
+   * Refuse to set: QuerySets are read-only.
+   */
   public function offsetSet(mixed $offset, mixed $value): void{
     throw new \Exception("QuerySets are read-only");
   }
 
+
+  /**
+   * Refuse to set: QuerySets are read-only.
+   */
   public function offsetUnset(mixed $offset): void{
     throw new \Exception("QuerySets are read-only");
   }
@@ -337,8 +467,11 @@ class QuerySet
 
   public function lookup(string $value): array{
     $ismatch = preg_match('/(?<column>.+)__(?<condition>.+)/', $value, $match);
-    return array("column"=>$ismatch ? $match["column"] : $value, "condition"=>$ismatch ? $match["condition"] : "equals");
-}
+    return array(
+      "column"    => $ismatch ? $match["column"]    : $value,
+      "condition" => $ismatch ? $match["condition"] : "equals"
+    );
+  }
 
 
 }
