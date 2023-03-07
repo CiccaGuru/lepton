@@ -13,6 +13,14 @@ abstract class Model{
    */
   private array $fields;
 
+
+  /**
+   * The relationships of the model.
+   * @var array
+   */
+
+  private array $relationships;
+
   /**
    * The primary key. It's not the actual value
    * @var DataTypes\PrimaryKey
@@ -50,6 +58,7 @@ abstract class Model{
   function __construct(){
 
     $this->fields = array();
+    $this->relationships = array();
     $this->editedFields = array();
 
     $this->checkTableName();
@@ -105,6 +114,8 @@ abstract class Model{
             $this->pk = $fieldType->newInstance();
             $this->pkName = $maybeField->getName();
           }
+        } else if($fieldType->getName() == DataTypes\ForeignKey::class){
+          $this->relationships[$maybeField->getName()] = $fieldType->newInstance();
         } else {
           $this->fields[$maybeField->getName()] = $fieldType->newInstance();
         }
@@ -205,19 +216,44 @@ abstract class Model{
    */
   public final function __set(string $property, mixed $value){
     if(array_key_exists($property, $this->fields) ){
-      if($this->fields[$property]->validate($value)){
-        $this->editedFields[] = $property;
-        $this->editedFields = array_unique($this->editedFields);
+      if($this->setEditedField($property, $value, $this->fields)){
         $this->$property = $value;
-      } else{
-        $className = get_class($this);
-        throw new Exceptions\InvalidFieldException("Invalid value for field \"$property\" of $className: $value ");
       }
     }
-    else{
+    else if(array_key_exists($property, $this->relationships)){
+      if ($this->relationships[$property]->parent == $value::class ){
+        if($this->setEditedField($property, $value->getPk(), $this->relationships)){
+          $this->$property = $value;
+        }
+      } else {
+        throw new \Exception(sprintf("Given model is wrong type, expecting %, % given", $this->relationships[$property]->parent, $value::class  ));
+      }
+    } else {
       $className = get_class($this);
       throw new Exceptions\FieldNotFoundException("Cannot retrieve field \"$property\" of $className.");
     }
+  }
+
+
+  /**
+   * Set the value for edited field
+   *
+   * @param mixed $property
+   * @param mixed $value
+   * @param array $conteiner
+   *
+   * @return bool
+   */
+  private function setEditedField(mixed $property, mixed $value, array &$container):bool{
+    if($container[$property]->validate($value)){
+      $this->editedFields[] = $property;
+      $this->editedFields = array_unique($this->editedFields);
+      return true;
+    } else{
+      $className = get_class($this);
+      throw new Exceptions\InvalidFieldException("Invalid value for field \"$property\" of $className: $value ");
+    }
+    return false;
   }
 
 
@@ -227,6 +263,9 @@ abstract class Model{
     foreach($this->fields as $k => $field){
       $toPrint .= "$k => ".$this->$k."<br/>";
     }
+    foreach($this->relationships as $k => $field){
+      $toPrint .= "$k => ".$this->$k::class."(".$this->$k->getPkName()."=".$this->$k->getPk().")<br/>";
+    }
 
     return $toPrint;
   }
@@ -235,6 +274,10 @@ abstract class Model{
 
   public final function getPk(){
     return $this->{$this->pkName};
+  }
+
+  public final function getPkName(){
+    return $this->pkName;
   }
 
   public final static function getTableName(){
@@ -300,7 +343,7 @@ abstract class Model{
   private function update(){
     $db = Application::getDb();
 
-    $values = array_map(fn($value) => $this->$value, $this->editedFields);
+    $values = array_map(array($this, "getFieldValues"),  $this->editedFields);
     array_push($values, $this->getPk());
 
     $fieldsString = implode(", ", array_map(fn($value) => "$value = ?", $this->editedFields));
@@ -323,9 +366,11 @@ abstract class Model{
 
     $db = Application::getDb();
 
-    $values = array_map(fn($value) => $this->$value, $this->editedFields);
+    //die(print_r($this->editedFields));
 
-    $fieldsString = implode(", ",  $this->editedFields);
+    $values = array_map(array($this, "getFieldValues"),  $this->editedFields);
+
+    $fieldsString = implode(", ",  array_map(array($this, "getFieldName"), $this->editedFields));
     $placeholders = implode(", ", array_fill(0, count( $this->editedFields), "?"));
     $query = sprintf("INSERT INTO `%s` (%s) VALUES (%s)", static::$tableName, $fieldsString, $placeholders);
 
@@ -334,7 +379,19 @@ abstract class Model{
     return $result->last_insert_id();
   }
 
+  private function getFieldName($field):string{
+    if(array_key_exists($field, $this->fields))
+      return $field;
+    else if(array_key_exists($field, $this->relationships))
+      return $field."_".($this->$field)->getPkName();
+  }
 
+  private function getFieldValues($field): mixed{
+      if(array_key_exists($field, $this->fields))
+        return $this->$field;
+      else if(array_key_exists($field, $this->relationships))
+        return ($this->$field)->getPk();
+  }
 
   /**
    * Get a unique result from the database.
