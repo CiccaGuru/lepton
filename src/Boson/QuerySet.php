@@ -211,6 +211,7 @@ class QuerySet
     $this->valid = !is_null(($items));
 
     // If iteration is valid, update $this->current, $this->index
+
     $this->current = $this->valid ? ($this->model)::new(...$items) : NULL;
     $this->index = $this->valid ? $this->current->getPk() : -1;
 
@@ -289,8 +290,6 @@ class QuerySet
 
 
   private function extract_filters($filters) : array{
-    $processed_filters = array();
-
     if((count($filters) == 1) && ($filters[array_key_first($filters)] instanceof QuerySet)){
       return $filters[array_key_first($filters)]->filters;
     } else if(count(array_filter($filters, fn($x) => $x instanceof QuerySet)) > 0){
@@ -298,7 +297,6 @@ class QuerySet
     } else {
       return $filters;
     }
-    return $processed_filters;
   }
 
   public function filter(...$filters): QuerySet{
@@ -391,25 +389,58 @@ class QuerySet
 
 
 
-  private function buildQuery(){
+  public function buildQuery(){
 
     $tableName = $this->model::getTableName();
-    $query = "SELECT * FROM $tableName";
-    $values = array();
+    $columns = (new $this->model)->getColumnList();
+    $selectColumns = array_map(array($this, "buildSelectColumns"), $columns);
+    //die(print_r($selectColumns));
 
+    $query = sprintf(" SELECT %s FROM %s ", implode(", ", $selectColumns) ,$tableName);
+    $values = array();
+    $join = array();
     if(count($this->filters)> 0){
-      list($whereClause, $values) = $this->buildWhereClause($this->filters);
+      list($whereClause, $values, $join) = $this->buildWhereClause($this->filters);
+      array_unshift($join, array("table" => $this->model::getTableName()));
+      $query .= $this->buildJoin($join);
       $query .= sprintf(" WHERE %s ", $whereClause);
     }
+
 
     if(count($this->modifiers)> 0){
       $modifiers = $this->buildModifiers($this->modifiers);
       $query .= sprintf(" %s", $modifiers);
     }
-
+    //die($query);
     return array($query, $values);
   }
 
+
+  private function buildSelectColumns($value){
+    $tableName = $this->model::getTableName();
+
+    if(is_array($value)){
+      return sprintf("%s.%s_%s as %s", $tableName, $value[0], $value[1], $value[0]);
+    } else return $tableName.".".$value;
+  }
+
+
+  private function buildJoin(array $join){
+    if(count($join) == 1) return "";
+      $clause = array();
+      for($i = 1; $i < count($join); $i++){
+        $clause[] =  sprintf(" %s ON %s.%s_%s = %s.%s",
+          $join[$i]["table"],
+          $join[$i-1]["table"],
+          $join[$i]["column"],
+          $join[$i]["pk"],
+          $join[$i]["table"],
+          $join[$i]["pk"]);
+      }
+      $return = "JOIN ".implode(" JOIN ", $clause);
+
+      return $return;
+  }
 
 
   private function buildModifiers(array $modifiers){
@@ -423,9 +454,11 @@ class QuerySet
   );
   }
 
+
   private function buildWhereClause($filters){
     $where = "";
     $parameters = array();
+    $join = array();
     foreach($filters as $n => $filter){
       foreach($filter as $logic => $values){
         if($n != 0) $where .= sprintf(" %s ", $logic);
@@ -438,38 +471,63 @@ class QuerySet
           $where .= $atomic[0];
         }
         $parameters = array_merge($parameters, $atomic[1]);
+        $join = array_merge($join, $atomic[2]);
 
       }
     }
 
-    return array($where, $parameters);
+    return array($where, $parameters, $join);
   }
 
   private function buildAtomicWhereClause($filters){
 
       $conditions = array();
       $values = array();
+      $join = array();
 
-      array_walk($filters, function(mixed &$value, string $key) use (&$conditions, &$values){
+      array_walk($filters, function(mixed &$value, string $key) use (&$conditions, &$values, &$join){
 
         $lookup = $this->lookup($key);
+
         $column = $lookup["column"];
         $condition = $lookup["condition"];
+
+        if(empty($lookup["join"])){
+          $tableName = (new $this->model)->getTableName();
+        } else {
+          $tableName = end($lookup["join"])["table"];
+        }
         $map = $this->lookup_map[$condition];
         $values[$column] = ($map["rhs"])($value);
-        $conditions[$column] = sprintf("%s %s ?", $column, $map["operator"]);  ;
+        $conditions[$column] = sprintf("%s.%s %s ?", $tableName, $column, $map["operator"]);
+        $join = array_merge($join, $lookup["join"]);
       });
 
       $clause = implode(" AND ", $conditions);
-      return array(0=>$clause, 1=> array_values($values));
+      return array(0=>$clause, 1=> array_values($values), 2 => $join);
   }
 
 
   public function lookup(string $value): array{
-    $ismatch = preg_match('/(?<column>.+)__(?<condition>.+)/', $value, $match);
+    $match = explode("__", $value);
+    if(array_key_exists(end($match), $this->lookup_map)){
+      $condition = array_pop($match);
+    } else {
+      $condition = "equals";
+    }
+    $column = array_pop($match);
+    // now match has only joins
+    $last = new $this->model;
+    $join = array();
+    foreach($match as $k){
+      $parentName = $last->getRelationshipParentModel($k);
+      $last = new $parentName;
+      $join[] = array("column"=> $k, "table" => $last->getTableName(), "pk" => $last->getPkName());
+    }
     return array(
-      "column"    => $ismatch ? $match["column"]    : $value,
-      "condition" => $ismatch ? $match["condition"] : "equals"
+      "column"    => $column,
+      "condition" => $condition,
+      "join" => $join
     );
   }
 

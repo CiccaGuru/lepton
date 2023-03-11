@@ -128,6 +128,13 @@ abstract class Model{
     }
   }
 
+  /**
+   *
+   */
+
+  final function getRelationshipParentModel($prop):string{
+   return $this->relationships[$prop]->parent;
+  }
 
   /**
    * Analyze a property's attributes to check if it's a field.
@@ -137,7 +144,7 @@ abstract class Model{
    * @param \ReflectionProperty $prop
    * @return bool|Object
    */
-  private function getFieldType($prop) {
+  final function getFieldType($prop) {
 
     $attributes = $prop->getAttributes();
     $fieldType = NULL;
@@ -195,11 +202,13 @@ abstract class Model{
    * @return mixed
    */
   public final function __get(string $property){
-    $childClass = get_class($this);
-    if(property_exists($childClass, $property))
+    if(array_key_exists($property, $this->fields)){
       return $this->$property;
-    else
-      throw new Exceptions\FieldNotFoundException("Model '$childClass' has no field '$property'.");
+    } else if (array_key_exists($property, $this->relationships)){
+      $parent = $this->relationships[$property]->parent::get($this->$property);
+      return $parent;
+    } else
+      throw new Exceptions\FieldNotFoundException("Model has no field '$property'.");
   }
 
   /**
@@ -215,6 +224,7 @@ abstract class Model{
    * @return void
    */
   public final function __set(string $property, mixed $value){
+
     if(array_key_exists($property, $this->fields) ){
       if($this->setEditedField($property, $value, $this->fields)){
         $this->$property = $value;
@@ -264,8 +274,11 @@ abstract class Model{
       $toPrint .= "$k => ".$this->$k."<br/>";
     }
     foreach($this->relationships as $k => $field){
-      $toPrint .= "$k => ".$this->$k::class."(".$this->$k->getPkName()."=".$this->$k->getPk().")<br/>";
+      $parent = new $field->parent;
+      $class = explode("\\",$field::class);
+      $toPrint .= "$k => ".end($class)." (".$parent->getPkName()."=".$this->$k.")<br/>";
     }
+
 
     return $toPrint;
   }
@@ -284,6 +297,17 @@ abstract class Model{
     return static::$tableName;
   }
 
+  public final function getColumnList(): array{
+    $columns = array($this->pkName);
+    foreach($this->fields as $k=>$field){
+      $columns[] = $k;
+    }
+    foreach($this->relationships as $k=>$field){
+      $pk = (new $field->parent)->getPkName();
+      $columns[] = array($k, $pk);
+    }
+    return $columns;
+  }
 
   /**
    * Statically initialize the model
@@ -296,6 +320,7 @@ abstract class Model{
    */
 
   public static function new(...$args){
+
     $class = new \ReflectionClass(get_called_class());
     $model = new ($class->getName());
 
@@ -366,8 +391,6 @@ abstract class Model{
 
     $db = Application::getDb();
 
-    //die(print_r($this->editedFields));
-
     $values = array_map(array($this, "getFieldValues"),  $this->editedFields);
 
     $fieldsString = implode(", ",  array_map(array($this, "getFieldName"), $this->editedFields));
@@ -412,6 +435,9 @@ abstract class Model{
     }
 
     $querySet = static::filter(...$filters);
+
+
+
     $result = $querySet->do();
     if($result->count() == 0){
       throw new \Exception("No result found");
