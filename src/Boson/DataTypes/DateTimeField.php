@@ -5,4 +5,8 @@ namespace Lepton\Boson\DataTypes;
 class DateTimeField extends Field{
   public function __construct(){
   }
+
+  public function validate($value){
+    return true;
+  }
 }
