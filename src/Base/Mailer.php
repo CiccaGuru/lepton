@@ -19,12 +19,13 @@ class Mailer
         //$this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
 
         $this->mailer->Host = $config->host;
-        $this->mailer->Port = 587;
-        $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $this->mailer->Port = 465;
+        $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $this->mailer->setFrom($config->username, 'AGA 2023');
         $this->mailer->SMTPAuth = true;
         $this->mailer->Username = $config->username;
         $this->mailer->Password = $config->password;
-        $this->mailer->addReplyTo($config->replyTo, 'AGA 2023');
+        $this->mailer->addReplyTo($config->replyTo, $config->replyToName);
     }
 
     public function send($to, $subject, $body)
