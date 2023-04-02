@@ -28,4 +28,9 @@ class HttpResponse
         // Send response body
         echo $this->body;
     }
+
+    public function __toString()
+    {
+        return $this->body;
+    }
 }

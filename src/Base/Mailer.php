@@ -28,11 +28,16 @@ class Mailer
         $this->mailer->addReplyTo($config->replyTo, $config->replyToName);
     }
 
-    public function send($to, $subject, $body)
+    public function send($to, $subject, $body, $attachments=array())
     {
         $this->mailer->addAddress($to);
         $this->mailer->Subject = $subject;
         $this->mailer->msgHTML($body);
+        foreach ($attachments as $att) {
+            $file = $_SERVER['DOCUMENT_ROOT'].Application::getDir()."/resources/".$att;
+            $this->mailer->addAttachment($file);
+        }
+
         $sent = $this->mailer->send();
         $this->error = $this->mailer->ErrorInfo;
         return $sent;
