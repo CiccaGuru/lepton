@@ -73,7 +73,9 @@ class Application
          }
      }
      if (!$found) {
-         echo "No route found!";
+        include("404.php");
+        exit;
+
      }
  }
 

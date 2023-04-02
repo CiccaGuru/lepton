@@ -10,28 +10,38 @@ use Lepton\Base\Application;
 
 class Route
 {
+
+    public static function patternPrepare($pattern){
+        $pattern = str_replace('?', '\?', $pattern);
+
+        // if the type selector is not followed by a quantifier, than choose any length
+        $pattern = preg_replace('/<([^{\d}]+?)(?!{[\d]+}):(.+?)>/', '<${1}+:${2}>', $pattern);
+
+        // if the type selector is "int", match numbers
+        $pattern = preg_replace('/<int([+{\d}]+?):(.+?)>/', '<\\d${1}:${2}>', $pattern);
+
+        // if the type selector is "alpha" or "alnum"
+        $pattern = preg_replace('/<(alpha|alnum)([+{\d}]+?):(.+?)>/', '<[[:${1}:]]${2}:${3}>', $pattern);
+
+        // if there is no type selector, match anything but a /
+        $pattern = preg_replace('/<([^:]+?)>/', '(?<${1}>[^/]+)', $pattern);
+
+        // build regex
+        $pattern = preg_replace('/<(.+?):(.+?)>/', '(?<${2}>${1})', $pattern);
+
+        // replace slashes for regex
+        $pattern = str_replace('/', '\/', $pattern);
+
+        return $pattern;
+
+    }
+
+
     protected static function patternMatch($pattern, &$parameters)
     {
         $parameters = array();
 
-
-        // if the type selector is not followed by a quantifier, than choose any length
-        $pattern = preg_replace('/<([^{\d}]+)(?!{[\d]+}):(.+)>/', '<${1}+:${2}>', $pattern);
-
-        // if the type selector is "int", match numbers
-        $pattern = preg_replace('/<int([+{\d}]+):(.+)>/', '<\\d${1}:${2}>', $pattern);
-
-        // if the type selector is "alpha" or "alnum"
-        $pattern = preg_replace('/<(alpha|alnum)([+{\d}]+):(.+)>/', '<[[:${1}:]]${2}:${3}>', $pattern);
-
-        // if there is no type selector, match anything but a /
-        $pattern = preg_replace('/<([^:]+)>/', '(?<${1}>[^/]+)', $pattern);
-
-        // build regex
-        $pattern = preg_replace('/<(.+):(.+)>/', '(?<${2}>${1})', $pattern);
-
-        // replace slashes for regex
-        $pattern = str_replace('/', '\/', $pattern);
+        $pattern = self::patternPrepare($pattern);
 
         // perform actual match on request uri
         $is_match = preg_match(sprintf("/^%s$/", $pattern), $_SERVER['REQUEST_URI'], $parameters);
@@ -46,6 +56,7 @@ class Route
     public static function match($pattern, $callback): bool
     {
         $parameters = array();
+
 
         if (self::patternMatch($pattern, $parameters)) {
             if (is_callable($callback)) {

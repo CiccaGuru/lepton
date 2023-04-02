@@ -30,7 +30,7 @@ abstract class BaseController
         $parameters["page"] = $_SERVER["REQUEST_URI"];
         $authenticator = new UserAuthenticator();
 
-        $parameters["user"] = $authenticator->getLoggedUser();
+        $parameters["logged_user"] = $authenticator->getLoggedUser();
 
         if (isset($this->default_parameters)) {
             $parameters = array_merge($parameters, $this->default_parameters);
