@@ -15,6 +15,7 @@ namespace Lepton\Base;
 
 
     <body>
+        <div class="container">
         <div class="d-flex align-items-center justify-content-center vh-100">
             <div class="text-center">
                 <h1 class="display-1 fw-bold">404</h1>
@@ -25,6 +26,8 @@ namespace Lepton\Base;
                 <a href="<?= "/".Application::getDir()."/" ?>" class="btn btn-primary">Go Home</a>
             </div>
         </div>
+        </div>
+
     </body>
 
 

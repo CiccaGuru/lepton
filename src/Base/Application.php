@@ -88,7 +88,6 @@ class Application
      if (file_exists($filePath)) {
          // Get the file extension
          $fileExtension = pathinfo($filePath, PATHINFO_EXTENSION);
-
          // Set the content type based on the file extension
          switch ($fileExtension) {
              case 'png':
@@ -106,6 +105,9 @@ class Application
                  break;
              case 'js':
                  $contentType = 'text/javascript';
+                 break;
+             case 'pdf':
+                 $contentType = 'application/pdf';
                  break;
              default:
                  $contentType = '';
