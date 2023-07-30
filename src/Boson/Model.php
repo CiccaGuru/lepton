@@ -14,6 +14,11 @@ abstract class Model
      */
     private array $fields;
 
+    /**
+     * Map between fields' names and table columns' names
+     */
+    private array $tableColumns;
+
 
     /**
      * The relationships of the model.
@@ -21,6 +26,15 @@ abstract class Model
      */
 
     private array $relationships;
+
+
+    /**
+     * The names of the database columns for the fields.
+     * @var arrat
+     */
+
+    private array $db_columns;
+
 
     /**
      * The primary key. It's not the actual value
@@ -61,13 +75,18 @@ abstract class Model
     {
         $this->fields = array();
         $this->relationships = array();
+        $this->db_columns = array();
         $this->editedFields = array();
 
         $this->checkTableName();
         $this->checkFieldsAreProtected();
         $this->extractFieldsFromAttributes();
+
         return $this;
     }
+
+
+
 
     /**
      * Check if table name is set. If not set, get it by transforming class name to sneak-case
@@ -106,20 +125,50 @@ abstract class Model
 
         foreach ($maybeFields as $maybeField) {
             if ($fieldType = $this->getFieldType($maybeField)) {
+                $field = $fieldType->newInstance();
+
+
                 // Check if it's PrimaryKey
                 if ($fieldType->getName() == DataTypes\PrimaryKey::class) {
                     // A model must have only one Primary Key
                     if (isset($this->pk)) {
                         throw new Exceptions\MultiplePrimaryKeyException($maybeField);
                     } else {
-                        $this->pk = $fieldType->newInstance();
+                        $this->pk = $field;
                         $this->pkName = $maybeField->getName();
+
+                        // If column name is not set, use field name
+                        if($field->db_column() == "") {
+                            $field->set_db_column($maybeField->getName());
+                        }
                     }
                 } elseif ($fieldType->getName() == DataTypes\ForeignKey::class) {
-                    $this->relationships[$maybeField->getName()] = $fieldType->newInstance();
+                    $this->relationships[$maybeField->getName()] = $field;
+                    // If column name is not set, get parent Primary Key name
+                    if($field->db_column() == "") {
+                        $props = (new \ReflectionClass($field->parent))->getProperties(\ReflectionProperty::IS_PROTECTED);
+                        $parentPkName = "";
+                        foreach($props as $prop) {
+                            $attributes = $prop->getAttributes(DataTypes\PrimaryKey::class);
+                            if(count($attributes)) {
+                                $parentPkName = $prop->getName();
+                            }
+                        }
+                        $field->set_db_column($maybeField->getName()."_".$parentPkName);
+
+                    }
+
                 } else {
-                    $this->fields[$maybeField->getName()] = $fieldType->newInstance();
+                    $this->fields[$maybeField->getName()] = $field;
+
+                    // If column name is not set, use field name
+                    if($field->db_column() == "") {
+                        $field->set_db_column($maybeField->getName());
+                    }
                 }
+
+                $this->db_columns[$maybeField->getName()] = $field->db_column();
+
             }
         }
 
@@ -175,6 +224,10 @@ abstract class Model
     }
 
 
+    final public function db_columns(){
+        return $this->db_columns;
+    }
+
     /**
      * Check that all the attributes that have a Field attribute are declared as protected
      *
@@ -212,6 +265,7 @@ abstract class Model
      */
     final public function __get(string $property)
     {
+        $camelcase = preg_replace_callback("/(?:^|_)([a-zA-Z])/", fn ($x) => strtoupper($x[1]), $property);
         if (array_key_exists($property, $this->fields)) {
             return $this->$property;
         } elseif (array_key_exists($property, $this->relationships)) {
@@ -219,9 +273,21 @@ abstract class Model
             return $parent;
         } elseif ($property == $this->pkName) {
             return $this->getPk();
-        } else {
-            throw new Exceptions\FieldNotFoundException("Model has no field '$property'.");
+        } elseif(class_exists("App\Models\\".$camelcase)) {
+            $class = new \ReflectionClass(get_class($this));
+            $className =  explode("\\", $class->getName());
+            $columnName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', end($className)));
+            $foreignKey = (new \ReflectionClass("App\Models\\".$camelcase))->getProperty($columnName);
+            $a = $foreignKey->getAttributes("Lepton\Boson\DataTypes\ForeignKey");
+            if(count($a) == 1) {
+                $parameters = [$columnName => $this->getPk()];
+                return ("App\Models\\".$camelcase)::filter(...$parameters);
+            } else {
+                throw new \Exception("Referenced Model has no ForeignKey to traverse the relationship");
+            }
         }
+        throw new Exceptions\FieldNotFoundException("Model has no field '$property'.");
+
     }
 
     /**
@@ -329,14 +395,10 @@ abstract class Model
 
     final public function getColumnList(): array
     {
-        $columns = array($this->pkName);
-        foreach ($this->fields as $k=>$field) {
-            $columns[] = $k;
+        foreach ($this->db_columns as $column) {
+            $columns[] = $column;
         }
-        foreach ($this->relationships as $k=>$field) {
-            $pk = (new $field->parent())->getPkName();
-            $columns[] = array($k, $pk);
-        }
+
         return $columns;
     }
 
@@ -362,6 +424,12 @@ abstract class Model
         return $model;
     }
 
+
+    public function load(...$args){
+        foreach ($args as $prop => $value) {
+            $this->$prop = $value;
+        }
+    }
 
     /*
     ======================================================================================
@@ -406,7 +474,7 @@ abstract class Model
         array_push($values, $this->getPk());
 
         $fieldsString = implode(", ", array_map(fn ($value) => $this->getFieldName($value)." = ?", $this->editedFields));
-        $query = sprintf("UPDATE`%s` SET %s WHERE %s = ?", static::$tableName, $fieldsString, $this->pkName);
+        $query = sprintf("UPDATE `%s` SET %s WHERE %s = ?", static::$tableName, $fieldsString, $this->getFieldName($this->pkName));
         $result = $db->query($query, ...$values);
         return $result->affected_rows();
     }
@@ -428,7 +496,7 @@ abstract class Model
         $fieldsString = implode(", ", array_map(array($this, "getFieldName"), $this->editedFields));
         $placeholders = implode(", ", array_fill(0, count($this->editedFields), "?"));
         $query = sprintf("INSERT INTO `%s` (%s) VALUES (%s)", static::$tableName, $fieldsString, $placeholders);
-//        die($query);
+        //        die($query);
         $result = $db->query($query, ...$values);
 
         return $result->last_insert_id();
@@ -446,11 +514,12 @@ abstract class Model
 
     private function getFieldName($field): string
     {
-        if (array_key_exists($field, $this->fields)) {
+        return $this->db_columns[$field];
+        /*if (array_key_exists($field, $this->fields)) {
             return $field;
         } elseif (array_key_exists($field, $this->relationships)) {
             return $field."_".($this->$field)->getPkName();
-        }
+        }*/
     }
 
     private function getFieldValues($field): mixed

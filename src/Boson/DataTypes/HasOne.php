@@ -5,11 +5,11 @@ namespace Lepton\Boson\DataTypes;
 use Lepton\Boson\Model;
 
 #[\Attribute]
-class ForeignKey extends Relationship
+class HasOne extends Relationship
 {
-    public function __construct(public string $parent, mixed ...$options)
+    public function __construct(public string $sibling, mixed ...$options)
     {
-        parent::__construct($parent, ...$options);
+        parent::__construct($sibling, ...$options);
     }
 
     public function validate($value)

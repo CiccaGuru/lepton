@@ -5,7 +5,8 @@
     "require": {
         "phpmailer/phpmailer": "^6.7",
         "filp/whoops": "^2.14",
-        "liquid/liquid": "^1.4"
+        "liquid/liquid": "^1.4",
+        "scssphp/scssphp": "^1.11"
     },
     "license": "GNU-GPLv3",
     "autoload": {
@@ -24,5 +25,11 @@
         "allow-plugins": {
             "composer/installers": true
         }
+    },
+
+    "scripts": {
+        "post-install-cmd": [
+            "php -r ' echo \"Hello world \" ' "
+        ]
     }
 }

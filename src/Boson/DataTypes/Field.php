@@ -45,4 +45,12 @@ class Field{
       $this->check_validators(),
     );*/
   }
+
+  public function db_column(): string{
+    return $this->db_column;
+  }
+
+  public function set_db_column(string $column_name): void{
+    $this->db_column = $column_name;
+  }
 }

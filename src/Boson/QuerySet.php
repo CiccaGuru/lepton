@@ -211,13 +211,21 @@ class QuerySet implements \Iterator, \ArrayAccess
     {
         // Get next row of the query result
         $items = $this->result->fetch_assoc();
-
         // If no element is retrieved, then iteration is not valid
         $this->valid = !is_null(($items));
 
         // If iteration is valid, update $this->current, $this->index
         if ($this->valid) {
-            $this->current = ($this->model)::new(...$items);
+            // Create new model
+            $this->current = new $this->model;
+            $db_columns = $this->current->db_columns();
+            // Convert column names to field names
+            $fields = array();
+            foreach($items as $column => $value){
+                $fieldName = array_search($column ,$db_columns);
+                $fields[$fieldName] = $value;
+            }
+            $this->current->load(...$fields);
             $this->index = $this->current->getPk();
             $this->current->clearEditedFields();
         } else {
@@ -231,8 +239,9 @@ class QuerySet implements \Iterator, \ArrayAccess
     }
 
 
-    public function first(){
-        if(!isset($this->cache)){
+    public function first()
+    {
+        if(!isset($this->cache)) {
             $this->rewind();
         }
 
@@ -387,17 +396,6 @@ class QuerySet implements \Iterator, \ArrayAccess
         return $this;
     }
 
-    /**
-     * @todo:  Implement Relationships
-     */
-
-    /*public function union(): QuerySet{
-
-    }*/
-
-
-
-
 
 
     public function count(): int
@@ -409,24 +407,55 @@ class QuerySet implements \Iterator, \ArrayAccess
     }
 
 
-    public function do()
+
+    /**
+     *  Executes the query. Until this function is not called, no query is sent to the
+     *  database
+     *
+     *  @return QuerySet
+     */
+
+    public function do(): QuerySet
     {
+
+        // Build the query
         list($query, $values) = $this->buildQuery();
+
+        // Connect to DB
         $db = Application::getDb();
 
+
+        // Send the query to the database
+        // If there are values for prepared statements, send them too.
         if (count($values) > 0) {
             $result = $db->query($query, ...$values);
         } else {
             $result = $db->query($query);
         }
 
+
+        // Get the result
         $this->result = $result->fetch_result() ;
         return $this;
     }
 
 
+    /**
+     * Builds the query
+     *
+     * Query building happens in three steps:
+     * 1) Get the columns to select (do not SELECT * because of relationships)
+     * 2) Build WHERE clause
+     * 3) Build JOIN clause
+     * 4) Build GROUP BY and ORDER BY
+     *
+     * Returns an array containing the query and the values to be bound.
+     *
+     * @return array
+     *
+     */
 
-    public function buildQuery()
+    public function buildQuery(): array
     {
         $tableName = $this->model::getTableName();
         $columns = (new $this->model())->getColumnList();
@@ -436,31 +465,42 @@ class QuerySet implements \Iterator, \ArrayAccess
 
         $values = array();
         $join = array();
+
+        // if there are any filters build WHERE clause
         if (count($this->filters)> 0) {
             list($whereClause, $values, $join) = $this->buildWhereClause($this->filters);
             array_unshift($join, array("table" => $this->model::getTableName()));
+
+            // build JOIN for One-To-Many and One-To-One relationships
             $query .= $this->buildJoin($join);
             $query .= sprintf(" WHERE %s ", $whereClause);
         }
 
-
+        // it there are any ORDER BY, build the clause
         if (count($this->modifiers)> 0) {
             $modifiers = $this->buildModifiers($this->modifiers);
             $query .= sprintf(" %s", $modifiers);
         }
+
         return array($query, $values);
     }
 
 
-    private function buildSelectColumns($value)
+    /**
+     *  Build the string containing the correct column name to be used for the database
+     *  from the model field
+     */
+    private function buildSelectColumns(mixed $value)
     {
         $tableName = $this->model::getTableName();
 
-        if (is_array($value)) {
-            return sprintf("%s.%s_%s as %s", $tableName, $value[0], $value[1], $value[0]);
-        } else {
-            return $tableName.".".$value;
-        }
+        // if it has to traverse relationships
+        return $tableName.".".$value;
+        // if (is_array($value)) {
+        //     return sprintf("%s.%s_%s as %s", $tableName, $value[0], $value[1], $value[0]);
+        // } else {
+
+        // }
     }
 
 
