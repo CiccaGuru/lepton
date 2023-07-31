@@ -2,62 +2,45 @@
 
 namespace Lepton\Middleware;
 
-use \Lepton\Http\{Request, HttpResponse};
+use Lepton\Authenticator\AccessControlAttributes\{LoginRequired, AbstractAccessControlAttribute};
+use Lepton\Core\Application;
+use Lepton\Http\Request;
+use Lepton\Routing\Match\{BaseMatch, MatchRoute};
+use Lepton\Http\Response\{SuccessResponse, HttpResponse, RedirectResponse, PermissionDeniedRedirectResponse};
 
-// Abstract Middleware to be used in Routing
 
-class BaseAccessControlMiddleware{
+class BaseAccessControlMiddleware extends AbstractMiddleware
+{
+    protected function handle(mixed ...$params): HttpResponse|Request
+    {
 
-  protected function handle(Request $request): HttpResponse{
-    return new HttpResponse(200);
-  }
+        if($this->match instanceof MatchRoute) {
+            $reflection = new \ReflectionMethod($this->match->controller, $this->match->method);
+            $attributes = $reflection->getAttributes();
 
-  public function __invoke(Request $request) {
-        // Implement your logic for handling the request here
-        // For example, logging the incoming request data
-        // or checking authentication credentials
+            foreach ($attributes as $attribute) {
+                if(is_subclass_of($attribute->getName(), AbstractAccessControlAttribute::class)) {
+                    return
+                        $this->checkPermissions($attribute->getName(),  ...($attribute->getArguments()))?
+                        $this->request :
+                        new RedirectResponse(
+                            Application::getAuthConfig()->login_url,
+                            redirect_after: $this->request->url
+                        );
+                }
 
-        return $this->handle($request); // You can return the modified request object or a new request object
+            }
+            return $this->request;
+        }
     }
 
 
+    protected function checkPermissions(string $modifier, mixed ...$params):bool{
+        if($modifier == LoginRequired::class){
+            $authenticator = new \Lepton\Authenticator\UserAuthenticator();
+            return $authenticator->isLoggedIn();
+        }
+        return true;
+    }
 
-
-       /* $middlewareClasses = Application::getAppConfig()->middleware;
-                    $middlewareChain = null;
-                    foreach (array_reverse($middlewareClasses) as $middlewareClass => $middlewareOptions) {
-                        $middlewareChain = new $middlewareClass($middlewareChain, ...$middlewareOptions);
-                    }
-
-                    die(print_r($middlewareChain));
-                    $response = $middlewareChain($request);
-
-
-                    $reflection = new \ReflectionMethod($controller, $method);
-                    $attributes = $reflection->getAttributes();
-
-
-
-                    $loginRequired = false;
-                    $loginLevel = 0;
-                    foreach ($attributes as $attribute) {
-                        if ($attribute->getName() == LoginRequired::class) {
-                            $loginRequired = true;
-                            $arguments = $attribute->getArguments();
-                            if(count($arguments) > 0) {
-                                $loginLevel = array_pop($arguments);
-                            } else {
-                                $loginLevel = 0;
-                            }
-                        }
-                    }
-
-                    $authenticator = new \Lepton\Authenticator\UserAuthenticator();
-                    $loggedIn = $authenticator->isLoggedIn();
-                    if ($loginRequired && !$loggedIn) {
-                        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
-                        $httpResponse = new RedirectResponse("login");
-                    } elseif($loginRequired && $loggedIn && $authenticator->getLevel() < $loginLevel) {
-                        $httpResponse = new RedirectResponse("");
-                    } else {*/
 }

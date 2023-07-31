@@ -3,12 +3,12 @@
 namespace Lepton\Core\Handler;
 use Lepton\Http\Request;
 use Lepton\Http\Response\HttpResponse;
-use Lepton\Routing\Match;
+use Lepton\Routing\Match\BaseMatch;
 
 abstract class AbstractHandler
 {
-    abstract public function handle($matcher) : HttpResponse;
-    abstract public function resolveRequest() : Match\BaseMatch;
+    abstract protected function handle(BaseMatch $matcher) : HttpResponse;
+    abstract protected function resolveRequest() : BaseMatch;
 
 
     protected Request $request;

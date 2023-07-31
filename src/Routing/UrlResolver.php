@@ -65,37 +65,5 @@ class UrlResolver
 
 
 
-/*
-        {
-            if (is_callable($callback)) {
-
-                $callback($parameters);
-                exit();
-            }
-
-            if (is_array($callback)) {
-                $controller = $callback[0];
-                $method = $callback[1];
-                if (! method_exists($controller, $method)) {
-                     throw new \Lepton\Exceptions\ControllerNotFoundException("Invalid Controller and/or method in routes.php");
-                }
-
-
-
-                        $controllerObject = new $controller();
-                        Application::$controller = $controllerObject->baseLink;
-                        $httpResponse = $controllerObject->$method(...$parameters);
-
-
-                    $httpResponse->send();
-
-
-                } else {
-                    throw new \Lepton\Exceptions\ControllerNotFoundException("Invalid Controller and/or method in routes.php");
-                }
-                return true;
-            }
-
-        return false;*/
     }
 }

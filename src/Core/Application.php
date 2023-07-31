@@ -2,10 +2,12 @@
 
 namespace Lepton\Core;
 
+use Lepton\Core\Handler\AbstractHandler;
 use Lepton\Core\Handler\BaseHandler;
 use Lepton\Http\Request;
 use Lepton\Http\Response\{FileResponse, HttpResponse};
 use Lepton\Routing\Route;
+use Whoops;
 
 class Application
 {
@@ -23,16 +25,15 @@ class Application
 
     /**
      * Entry point for application logic
+     * Here it is where the whole magic happens
      */
     public static function run()
     {
-
-
         if(! static::$_config) {
             throw new \Exception("No config loaded!");
         }
 
-
+        session_start();
 
         if(static::$_dbconfig->use_db) {
             static::$_db = new Database(
@@ -56,18 +57,31 @@ class Application
 
     }
 
-
-    public static function getHandler(){
+    /**
+     * Returns the appropriate handler for the pending request
+     *
+     * @return AbstractHandler $handler
+    */
+    public static function getHandler(): AbstractHandler
+    {
         $regex = '/\.(?:'.implode('|', static::$_config->static_files_extensions).')$/';
         if (preg_match($regex, static::$request->url)) {
             return new Handler\StaticHandler(static::$request);
         }
+
         $handler = new Handler\BaseHandler(static::$request);
         $handler->addMiddlewares(static::$_config->middlewares);
         return $handler;
     }
 
-    public static function loadConfig($config) {
+
+    /**
+     * Loads the configuration for the application
+     * @param \stdClass $config
+     */
+
+    public static function loadConfig(\stdClass $config)
+    {
         if(property_exists($config, "app")) {
             static::$_config = $config->app;
         } else {
@@ -104,24 +118,31 @@ class Application
     }
 
 
-    public static function getDb() {
-        return static::$_db;
-    }
 
-    public static function loadErrorHandler(){
+    /**
+     * Loads the error handler (Whoops)
+     * For Whoops documentation
+     * @see https://filp.github.io/whoops/
+     */
+    public static function loadErrorHandler()
+    {
         $whoops = new \Whoops\Run();
-        $handler = new \Whoops\Handler\PrettyPageHandler();
 
+        $handler = new \Whoops\Handler\PrettyPageHandler();
         $handler->setPageTitle("Whooops! There was an unexpected error!");
-        //die(print_r($handler->getResourcePaths()));
         $handler->addResourcePath(__DIR__."/css");
         $handler->addCustomCss("whoops.css");
+
         $whoops->pushHandler($handler);
         $whoops->register();
     }
 
+    /*==================================== GETTERS ======================================= */
 
-
+    public static function getDb()
+    {
+        return static::$_db;
+    }
 
     public static function getDir()
     {
@@ -132,7 +153,6 @@ class Application
     {
         return static::$_auth;
     }
-
 
     public static function getDbConfig()
     {
