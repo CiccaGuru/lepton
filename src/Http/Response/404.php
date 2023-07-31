@@ -1,5 +1,5 @@
 <?php
-namespace Lepton\Base;
+namespace Lepton\Core;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -23,7 +23,7 @@ namespace Lepton\Base;
                 <p class="lead">
                     The page you’re looking for doesn’t exist.
                   </p>
-                <a href="<?= "/".Application::getDir()."/" ?>" class="btn btn-primary">Go Home</a>
+                <a href="<?= "/".Application::getDir() ?>" class="btn btn-primary">Go Home</a>
             </div>
         </div>
         </div>

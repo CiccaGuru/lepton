@@ -6,12 +6,15 @@ use Lepton\Exceptions\ControllerNotFoundException;
 use Lepton\Http\Request;
 use Lepton\Http\{HttpResponse, RedirectResponse};
 use Lepton\Authenticator\{UserAuthenticator, LoginRequired};
-use Lepton\Base\Application;
+use Lepton\Core\Application;
 
-class Route
+class UrlResolver
 {
 
-    public static function patternPrepare($pattern){
+    public function __construct(private $pattern){}
+
+    public function patternPrepare($pattern)
+    {
         $pattern = str_replace('?', '\?', $pattern);
 
         // if the type selector is not followed by a quantifier, than choose any length
@@ -37,11 +40,12 @@ class Route
     }
 
 
-    protected static function patternMatch($pattern, &$parameters)
+    protected function patternMatch($pattern, &$parameters)
     {
         $parameters = array();
 
-        $pattern = self::patternPrepare($pattern);
+
+        $pattern = $this->patternPrepare($pattern);
 
         // perform actual match on request uri
         $is_match = preg_match(sprintf("/^%s$/", $pattern), $_SERVER['REQUEST_URI'], $parameters);
@@ -53,50 +57,35 @@ class Route
         return $is_match;
     }
 
-    public static function match($pattern, $callback): bool
+    public function match($pattern): bool|array
     {
         $parameters = array();
 
+        return $this->patternMatch($pattern, $parameters) ? $parameters : false;
 
-        if (self::patternMatch($pattern, $parameters)) {
+
+
+/*
+        {
             if (is_callable($callback)) {
+
                 $callback($parameters);
                 exit();
             }
 
             if (is_array($callback)) {
-                $controller = /*"App\Controllers\\".*/$callback[0];
+                $controller = $callback[0];
                 $method = $callback[1];
-                if (method_exists($controller, $method)) {
-                    $reflection = new \ReflectionMethod($controller, $method);
-                    $attributes = $reflection->getAttributes();
+                if (! method_exists($controller, $method)) {
+                     throw new \Lepton\Exceptions\ControllerNotFoundException("Invalid Controller and/or method in routes.php");
+                }
 
-                    $loginRequired = false;
-                    $loginLevel = 0;
-                    foreach ($attributes as $attribute) {
-                        if ($attribute->getName() == LoginRequired::class) {
-                            $loginRequired = true;
-                            $arguments = $attribute->getArguments();
-                            if(count($arguments) > 0){
-                                $loginLevel = array_pop($arguments);
-                            } else {
-                                $loginLevel = 0;
-                            }
-                        }
-                    }
 
-                    $authenticator = new \Lepton\Authenticator\UserAuthenticator();
-                    $loggedIn = $authenticator->isLoggedIn();
-                    if ($loginRequired && !$loggedIn) {
-                        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
-                        $httpResponse = new RedirectResponse("login");
-                    } else if($loginRequired && $loggedIn && $authenticator->getLevel() < $loginLevel ){
-                        $httpResponse = new RedirectResponse("");
-                    } else {
+
                         $controllerObject = new $controller();
                         Application::$controller = $controllerObject->baseLink;
                         $httpResponse = $controllerObject->$method(...$parameters);
-                    }
+
 
                     $httpResponse->send();
 
@@ -106,7 +95,7 @@ class Route
                 }
                 return true;
             }
-        }
-        return false;
+
+        return false;*/
     }
 }

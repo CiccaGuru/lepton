@@ -1,10 +1,10 @@
 <?php
 
-namespace Lepton\Base;
+namespace Lepton\Core;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
-use Lepton\Base\Application;
+use Lepton\Core\Application;
 
 class Mailer
 {
@@ -21,7 +21,7 @@ class Mailer
         $this->mailer->Host = $config->host;
         $this->mailer->Port = 465;
         $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $this->mailer->setFrom($config->username, 'AGA 2023');
+        $this->mailer->setFrom($config->username, $config->fromName);
         $this->mailer->SMTPAuth = true;
         $this->mailer->Username = $config->username;
         $this->mailer->Password = $config->password;

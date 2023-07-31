@@ -3,10 +3,10 @@
 namespace Lepton\Controller;
 
 use Lepton\Authenticator\UserAuthenticator;
-use Lepton\Base\Application;
+use Lepton\Core\Application;
 use Liquid\{Liquid, Template};
 use Lepton\Boson\QuerySet;
-use Lepton\Http\{HttpResponse, RedirectResponse};
+use Lepton\Http\Response\{SuccessResponse, RedirectResponse};
 
 abstract class BaseController
 {
@@ -27,15 +27,17 @@ abstract class BaseController
                 return $x;
             }
         }, $parameters);
-        $parameters["page"] = $_SERVER["REQUEST_URI"];
+
         $authenticator = new UserAuthenticator();
 
+
+        $parameters["page"] = $_SERVER["REQUEST_URI"];
         $parameters["logged_user"] = $authenticator->getLoggedUser();
 
         if (isset($this->default_parameters)) {
             $parameters = array_merge($parameters, $this->default_parameters);
         }
-        return new HttpResponse(200, $headers, $template->render($parameters));
+        return new SuccessResponse($template->render($parameters), headers: $headers);
     }
 
 

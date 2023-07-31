@@ -2,9 +2,7 @@
 
 namespace Lepton\Boson;
 
-use Lepton\Base\Application;
-use Lepton\Base\Database;
-use mysqli_stmt;
+use Lepton\Core\Application;
 
 /**
  * QuerySet is lazy: it doesn't execute queries unless forced.

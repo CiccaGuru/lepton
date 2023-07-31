@@ -4,7 +4,7 @@ namespace Lepton\Boson;
 
 use Lepton\Exceptions;
 use Lepton\Boson\DataTypes;
-use Lepton\Base\Application;
+use Lepton\Core\Application;
 
 abstract class Model
 {

@@ -2,7 +2,7 @@
 
 namespace Lepton\Controller;
 
-use Lepton\Base\Application;
+use Lepton\Core\Application;
 
 class SiteFilter
 {

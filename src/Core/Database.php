@@ -1,5 +1,5 @@
 <?php
-namespace Lepton\Base;
+namespace Lepton\Core;
 
 class Database {
 

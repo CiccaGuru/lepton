@@ -2,7 +2,7 @@
 
 namespace Lepton\Authenticator;
 
-use Lepton\Base\Application;
+use Lepton\Core\Application;
 
 class UserAuthenticator
 {
@@ -11,6 +11,7 @@ class UserAuthenticator
     public function __construct()
     {
         $this->config = Application::getAuthConfig();
+
     }
 
     public function getUserByUsername($username)

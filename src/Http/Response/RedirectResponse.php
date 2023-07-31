@@ -1,11 +1,11 @@
 <?php
 
-namespace Lepton\Http;
-use Lepton\Base\Application;
+namespace Lepton\Http\Response;
+use Lepton\Core\Application;
 
 class RedirectResponse extends HttpResponse
 {
-    public $statusCode;
+
     public $headers;
     public $body;
 
@@ -30,17 +30,5 @@ class RedirectResponse extends HttpResponse
         return empty($parsed_url['host']) || $parsed_url['host'] === 'localhost';
     }
 
-    public function send()
-    {
-        // Send headers
-        foreach ($this->headers as $key => $value) {
-            header("$key: $value");
-        }
 
-        // Send response code
-        http_response_code($this->statusCode);
-
-        // Send response body
-        echo $this->body;
-    }
 }
