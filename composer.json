@@ -8,7 +8,7 @@
         "liquid/liquid": "^1.4",
         "scssphp/scssphp": "^1.11"
     },
-    "license": "GNU-GPLv3",
+    "license": "GPL-3.0-or-later",
     "autoload": {
         "psr-4": {
             "Lepton\\": "src/"
@@ -25,11 +25,5 @@
         "allow-plugins": {
             "composer/installers": true
         }
-    },
-
-    "scripts": {
-        "post-install-cmd": [
-            "php -r ' echo \"Hello world \" ' "
-        ]
     }
 }
