@@ -459,7 +459,7 @@ class QuerySet implements \Iterator, \ArrayAccess
         $columns = (new $this->model())->getColumnList();
         $selectColumns = array_map(array($this, "buildSelectColumns"), $columns);
 
-        $query = sprintf(" SELECT %s FROM %s ", implode(", ", $selectColumns), $tableName);
+        $query = sprintf(" SELECT DISTINCT %s FROM %s ", implode(", ", $selectColumns), $tableName);
 
         $values = array();
         $join = array();
@@ -492,13 +492,7 @@ class QuerySet implements \Iterator, \ArrayAccess
     {
         $tableName = $this->model::getTableName();
 
-        // if it has to traverse relationships
         return $tableName.".".$value;
-        // if (is_array($value)) {
-        //     return sprintf("%s.%s_%s as %s", $tableName, $value[0], $value[1], $value[0]);
-        // } else {
-
-        // }
     }
 
 
@@ -507,16 +501,17 @@ class QuerySet implements \Iterator, \ArrayAccess
         if (count($join) == 1) {
             return "";
         }
+        $join = array_values(array_unique($join, SORT_REGULAR));
+
         $clause = array();
         for ($i = 1; $i < count($join); $i++) {
             $clause[] =  sprintf(
-                " %s ON %s.%s_%s = %s.%s",
+                " %s ON %s.%s = %s.%s",
                 $join[$i]["table"],
                 $join[$i-1]["table"],
                 $join[$i]["column"],
-                $join[$i]["pk"],
                 $join[$i]["table"],
-                $join[$i]["pk"]
+                $join[$i]["column"]
             );
         }
         $return = "JOIN ".implode(" JOIN ", $clause);
@@ -571,7 +566,7 @@ class QuerySet implements \Iterator, \ArrayAccess
         $values = array();
         $join = array();
 
-        array_walk($filters, function (mixed &$value, string $key) use (&$conditions, &$values, &$join) {
+        foreach($filters as $key => $value) {
             $lookup = $this->lookup($key);
 
             $column = $lookup["column"];
@@ -591,10 +586,12 @@ class QuerySet implements \Iterator, \ArrayAccess
             }
 
             $conditions[$column] = sprintf("%s.%s %s ?", $tableName, $column, $map["operator"]);
+
             $join = array_merge($join, $lookup["join"]);
-        });
+        }
 
         $clause = implode(" AND ", $conditions);
+
         return array(0=>$clause, 1=> array_values($values), 2 => $join);
     }
 
@@ -602,35 +599,46 @@ class QuerySet implements \Iterator, \ArrayAccess
     public function lookup(string $value): array
     {
         $match = explode("__", $value);
+
+        // Get lookup method
         if (array_key_exists(end($match), $this->lookup_map)) {
             $condition = array_pop($match);
         } else {
             $condition = "equals";
         }
+
+        // Get column name
+        $last = new $this->model();
         $column = array_pop($match);
 
-        $last = new $this->model();
-        //check if column is a relationship.
-        // If it is a relationship, get pk name
-        if ($last->isRelationship($column)) {
-            $parentName = $last->getRelationshipParentModel($column);
-            $parent = new $parentName();
-            $pkName = $parent->getPkName();
-            $column .= "_".$pkName;
-        }
-
-
-        // now match has only joins
+        // Now match has only joins
 
         $join = array();
         foreach ($match as $k) {
-            $parentName = $last->getRelationshipParentModel($k);
-            $last = new $parentName();
-            $join[] = array("column"=> $k, "table" => $last->getTableName(), "pk" => $last->getPkName());
+            if($last->isForeignKey($k)) {
+                $new= new ($last->getRelationshipParentModel($k))();
+
+                $join[] = array(
+                    "column"=> $last->getColumnFromField($k),
+                    "table" => $new->getTableName()
+                );
+            } elseif ($last->isReverseForeignKey($k)) {
+                $reverseForeignKey = $last->getChild($k);
+                $new = new ($reverseForeignKey->child);
+
+                $join[] = array(
+                    "column" => $new->getColumnFromField($reverseForeignKey->foreignKey),
+                    "table" => $new->getTableName()
+                );
+
+            } else {
+                throw new \Exception("$value is not a valid relationship description");
+            }
+            $last = $new;
         }
 
         return array(
-          "column"    => $column,
+          "column"    => $last->getColumnFromField($column),
           "condition" => $condition,
           "join" => $join
         );

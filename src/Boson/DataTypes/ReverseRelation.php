@@ -5,9 +5,9 @@ namespace Lepton\Boson\DataTypes;
 use Lepton\Boson\Model;
 
 #[\Attribute]
-class ManyToMany extends Relationship
+class ReverseRelation extends Relationship
 {
-    public function __construct(public string $child, mixed ...$options)
+    public function __construct(public string $child, public string $foreignKey, mixed ...$options)
     {
         parent::__construct($child, ...$options);
     }
