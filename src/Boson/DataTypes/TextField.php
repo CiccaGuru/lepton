@@ -15,8 +15,8 @@ class TextField extends Field{
 
   public function validate($value){
     return true;
- /*   if(is_null($value) && (!$this->nullable)) return false;
-    if(strlen($value) > $this->max_length) return false;*/
+    if(is_null($value) && (!$this->nullable)) return false;
+    if(strlen($value) > $this->max_length) return false;
     return true;
   }
 }
