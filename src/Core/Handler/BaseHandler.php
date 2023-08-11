@@ -25,7 +25,9 @@ class BaseHandler extends AbstractHandler
         foreach (Application::$routes as $pattern => $callback) {
 
             // Add base_url to $pattern, if needed
-            $pattern = sprintf("%s/%s", Application::getAppConfig()->base_url, $pattern);
+
+            $link =  "%s/%s";
+            $pattern = sprintf($link, Application::getAppConfig()->base_url, $pattern);
             // If it matches, return the match
             $parameters = $resolver->match($pattern);
             if (is_array($parameters)) {
@@ -65,9 +67,10 @@ class BaseHandler extends AbstractHandler
               }
             }
 
+            Application::$controller = $matcher->controller;
             $controller = new $matcher->controller();
             $method =  $matcher->method;
-            return $controller->$method();
+            return $controller->$method(...$matcher->parameters);
         }
         throw new \Exception("Wrong matcher!");
         return new InternalErrorResponse();

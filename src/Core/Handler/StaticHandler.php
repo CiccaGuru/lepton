@@ -11,8 +11,13 @@ class StaticHandler extends AbstractHandler
     public function resolveRequest() : MatchFile|Match404{
 
         // Get the requested file path
-        $url = preg_replace("/^\/".Application::getAppConfig()->base_url."\//", "/", $this->request->url);
-        $filePath = Application::$documentRoot. Application::getAppConfig()->static_files_dir . $url;
+        $url = $this->request->url;
+        $url = preg_replace("/^".str_replace("/", "\/", Application::getAppConfig()->base_url)."\//", "", $url);
+
+
+        $root = Application::$documentRoot;
+        $root .= Application::getAppConfig()->base_url;
+        $filePath = $root."/".Application::getAppConfig()->static_files_dir. "/". $url;
 
         // Check if the file exists
         if (file_exists($filePath)) {
@@ -43,8 +48,10 @@ class StaticHandler extends AbstractHandler
                     $contentType = '';
                     break;
             }
+            //die($contentType);
             return new MatchFile(filePath: $filePath, contentType: $contentType);
         } else {
+            die($filePath);
           return new Match404();
         }
     }
