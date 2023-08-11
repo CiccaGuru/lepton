@@ -382,6 +382,7 @@ class QuerySet implements \Iterator, \ArrayAccess
         if (array_key_exists("ORDER BY", $this->modifiers)) {
             throw new \Exception("Multiple order By!");
         }
+
         $this->modifiers["ORDER BY"] = $filters;
         return $this;
     }
@@ -459,27 +460,40 @@ class QuerySet implements \Iterator, \ArrayAccess
         $columns = (new $this->model())->getColumnList();
         $selectColumns = array_map(array($this, "buildSelectColumns"), $columns);
 
-        $query = sprintf(" SELECT DISTINCT %s FROM %s ", implode(", ", $selectColumns), $tableName);
+        $query = sprintf(" SELECT %s FROM %s ", implode(", ", $selectColumns), $tableName);
 
         $values = array();
         $join = array();
+        $join_t = array();
+
+        $modifiers = "";
+
+        // it there are any ORDER BY, build the clause
+        if (count($this->modifiers)> 0) {
+            list($modifiers, $join) = $this->buildModifiers();
+        }
 
         // if there are any filters build WHERE clause
         if (count($this->filters)> 0) {
-            list($whereClause, $values, $join) = $this->buildWhereClause($this->filters);
-            array_unshift($join, array("table" => $this->model::getTableName()));
+            list($whereClause, $values, $join_t) = $this->buildWhereClause($this->filters);
+        }
 
-            // build JOIN for One-To-Many and One-To-One relationships
-            $query .= $this->buildJoin($join);
+        array_unshift($join_t, array("table" => $this->model::getTableName()));
+        array_unshift($join, array("table" => $this->model::getTableName()));
+        // build JOIN for One-To-Many and One-To-One relationships
+        $query .= " ".$this->buildJoin($join);
+        $query .= " ".$this->buildJoin($join_t);
+
+        if(count($this->filters)>0){
             $query .= sprintf(" WHERE %s ", $whereClause);
         }
 
         // it there are any ORDER BY, build the clause
         if (count($this->modifiers)> 0) {
-            $modifiers = $this->buildModifiers($this->modifiers);
-            $query .= sprintf(" %s", $modifiers);
+            $query .= sprintf(" ORDER BY %s", $modifiers);
         }
 
+       //if(strpos($query, "ORDER BY")) die (print_r($query));
         return array($query, $values);
     }
 
@@ -520,8 +534,30 @@ class QuerySet implements \Iterator, \ArrayAccess
     }
 
 
-    private function buildModifiers(array $modifiers)
+    private function buildModifiers()
     {
+        $order_by = $this->modifiers["ORDER BY"];
+        $conditions = array();
+        $join = array();
+        foreach($order_by as $raw) {
+            $parsed = $this->lookup($raw);
+
+            $column = $parsed["column"];
+            $condition = $parsed["condition"];
+
+            if (empty($parsed["join"])) {
+                $tableName = (new $this->model())->getTableName();
+            } else {
+                $tableName = end($parsed["join"])["table"];
+            }
+
+            $conditions[$column] = sprintf("%s.%s", $tableName, $column);
+            $join = array_merge($join, $parsed["join"]);
+
+        }
+            $clause = implode(", ", $conditions);
+            return [$clause, $join];
+        /*
         return implode(
             ", ",
             array_map(function ($v, $k) {
@@ -531,8 +567,8 @@ class QuerySet implements \Iterator, \ArrayAccess
                     return $k. " ".$v;
                 }
             }, $modifiers, array_keys($modifiers))
-        );
-    }
+        );*/
+      }
 
 
     private function buildWhereClause($filters)
