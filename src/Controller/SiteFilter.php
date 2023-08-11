@@ -8,7 +8,7 @@ class SiteFilter
 {
     public function url($string)
     {
-        return "/".Application::getDir()."/".$string;
+        return Application::getDir()."/".$string;
     }
 
 
@@ -32,5 +32,10 @@ class SiteFilter
     public function to_json($elements)
     {
         return json_encode($elements);
+    }
+
+    public function htmlquotes($element)
+    {
+        return htmlspecialchars($element);
     }
 }
