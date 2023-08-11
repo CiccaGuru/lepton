@@ -1,5 +1,6 @@
 .gitattribute export-ignore
 libs export-ignore
 .github export-ignore
+docs export-ignore
 lepton-welcome.png export-ignore
 README.md export-ignore
