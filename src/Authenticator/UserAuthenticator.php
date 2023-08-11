@@ -132,7 +132,8 @@ class UserAuthenticator
         if ($this->isLoggedIn()) {
             if (isset($_SESSION['user_id'])) {
                 $user = $this->getUserById($_SESSION['user_id']);
-                $user->hash = "";
+                $hashField = $this->config->hash_field;
+                $user->$hashField = "";
                 $user->save();
             }
             session_unset();
