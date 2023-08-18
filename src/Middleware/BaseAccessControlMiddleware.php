@@ -11,9 +11,9 @@ use Lepton\Http\Response\{SuccessResponse, HttpResponse, RedirectResponse, Permi
 
 class BaseAccessControlMiddleware extends AbstractMiddleware
 {
-    protected function handle(mixed ...$params): HttpResponse|Request
-    {
 
+    protected function handle(mixed ...$middlewareParams): HttpResponse|Request
+    {
         if($this->match instanceof MatchRoute) {
             $reflection = new \ReflectionMethod($this->match->controller, $this->match->method);
             $attributes = $reflection->getAttributes();

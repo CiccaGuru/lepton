@@ -11,6 +11,7 @@ use Lepton\Http\Response\{SuccessResponse, RedirectResponse};
 abstract class BaseController
 {
     protected array $default_parameters;
+    protected array $custom_filters;
     public string $baseLink;
     public function render(string $view, array $parameters = array(), $headers = array())
     {
@@ -19,6 +20,12 @@ abstract class BaseController
         $path = "app/Views";
         $template  = new Template($path);
         $template->registerFilter(new SiteFilter());
+
+        if(isset($this->custom_filters)){
+            foreach($this->custom_filters as $filter){
+                $template->registerFilter(new $filter());
+            }
+        }
         $template->parseFile($view);
         $parameters = array_map(function ($x) {
             if ($x instanceof QuerySet) {
