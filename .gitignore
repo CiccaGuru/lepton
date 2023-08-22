@@ -2,3 +2,4 @@ config/*
 /libs/
 composer.phar
 /vendor/
+docs/

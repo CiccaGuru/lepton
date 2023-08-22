@@ -194,7 +194,8 @@ abstract class Model
     }
 
 
-    final public function isReverseForeignKey($prop): bool{
+    final public function isReverseForeignKey($prop): bool
+    {
         return array_key_exists($prop, $this->reverseForeignKeys);
     }
 
@@ -293,7 +294,6 @@ abstract class Model
      */
     final public function __get(string $property)
     {
-        $camelcase = preg_replace_callback("/(?:^|_)([a-zA-Z])/", fn ($x) => strtoupper($x[1]), $property);
         if (array_key_exists($property, $this->fields)) {
             return $this->$property;
         } elseif ($this->isForeignKey($property)) {

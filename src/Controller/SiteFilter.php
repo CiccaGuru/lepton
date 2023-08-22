@@ -23,9 +23,7 @@ class SiteFilter
         $url = trim(str_replace("//", "", $url), "/");
         $tocheck = trim(str_replace("//", "", $tocheck), "/");
 
-        $url_exp = explode("/", $url);
-        $tocheck_exp = explode("/", $tocheck);
-        return intval($url_exp[0] == $tocheck_exp[0]);
+        return str_starts_with($tocheck, $url) && $url != "";
     }
 
 
