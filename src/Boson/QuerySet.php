@@ -377,12 +377,16 @@ class QuerySet implements \Iterator, \ArrayAccess
     }
 
 
-    public function order_by(string ...$filters): QuerySet
+    public function order_by(string|array ...$filters): QuerySet
     {
         if (array_key_exists("ORDER BY", $this->modifiers)) {
             throw new \Exception("Multiple order By!");
         }
 
+        $this->modifiers["ORDER BY"] = [];
+        foreach($filters as $filter){
+            $this->modifiers["ORDER BY"][] = is_array($filter) ? $filter : [$filter => "ASC"];
+        }
         $this->modifiers["ORDER BY"] = $filters;
         return $this;
     }
@@ -539,7 +543,11 @@ class QuerySet implements \Iterator, \ArrayAccess
         $order_by = $this->modifiers["ORDER BY"];
         $conditions = array();
         $join = array();
-        foreach($order_by as $raw) {
+
+        foreach($order_by as $order_clause) {
+            $raw = array_key_first($order_clause);
+            $method = $order_clause[$raw];
+
             $parsed = $this->lookup($raw);
 
             $column = $parsed["column"];
@@ -551,7 +559,7 @@ class QuerySet implements \Iterator, \ArrayAccess
                 $tableName = end($parsed["join"])["table"];
             }
 
-            $conditions[$column] = sprintf("%s.%s", $tableName, $column);
+            $conditions[$column] = sprintf("%s.%s %s", $tableName, $column, $method);
             $join = array_merge($join, $parsed["join"]);
 
         }
