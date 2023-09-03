@@ -88,7 +88,7 @@ class UserAuthenticator
 
 
 
-    public function register($username, $password=null, $level=1)
+    public function register($username, $password=null, $password_length=6)
     {
         // Check if username is already taken
         if ($this->getUserByUsername($username)) {
@@ -97,7 +97,7 @@ class UserAuthenticator
 
         // Hash the password
         if (! $password) {
-            $password = $this->randomPassword(length: 5);
+            $password = $this->randomPassword(length: $password_length);
         }
 
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
@@ -105,12 +105,10 @@ class UserAuthenticator
         $userModel = $this->config->auth_model;
         $usernameField = $this->config->username_field;
         $passwordField = $this->config->password_field;
-        $levelField = $this->config->level_field;
 
         $user = new $userModel();
         $user->$usernameField = $username;
         $user->$passwordField = $password_hash;
-        $user->$levelField = $level;
         return $user;
     }
 
