@@ -545,8 +545,13 @@ class QuerySet implements \Iterator, \ArrayAccess
         $join = array();
 
         foreach($order_by as $order_clause) {
-            $raw = array_key_first($order_clause);
-            $method = $order_clause[$raw];
+            if(is_array($order_clause)) {
+                $raw = array_key_first($order_clause);
+                $method = $order_clause[$raw];
+            } else {
+                $raw = $order_clause;
+                $method = "ASC";
+            }
 
             $parsed = $this->lookup($raw);
 
