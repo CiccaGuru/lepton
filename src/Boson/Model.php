@@ -535,7 +535,7 @@ abstract class Model
     final public function delete()
     {
         $db = Application::getDb();
-        $query = sprintf("DELETE FROM `%s` WHERE %s = ?", static::$tableName, $this->pkName);
+        $query = sprintf("DELETE FROM `%s` WHERE %s = ?", static::$tableName, $this->getFieldName($this->pkName));
         $pk = $this->getPk();
         $db->query($query, $pk);
         return;
