@@ -113,12 +113,12 @@ class UserAuthenticator
     }
 
 
-    public function passwordReset($id)
+    public function passwordReset($id, $length = 6)
     {
         $user = $this->getUserById($id);
         $passwordField = $this->config->password_field;
 
-        $password = $this->randomPassword(length: 5);
+        $password = $this->randomPassword(length: $length);
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
         $user->$passwordField = $password_hash;
         $user->save();
