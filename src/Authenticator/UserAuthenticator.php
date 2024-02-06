@@ -44,9 +44,17 @@ class UserAuthenticator
             $session_hash = bin2hex(random_bytes(32));
             $_SESSION['user_id'] = $user->getPk();
             $_SESSION['session_hash'] = $session_hash;
-            $hashField = $this->config->hash_field;
-            $user->$hashField = $session_hash;
-            $user->save();
+            if($this->config->login_use_unique_hash) {
+                $hashField = $this->config->hash_field;
+                $user->$hashField = $session_hash;
+                $user->save();
+            }
+            if(isset($this->config->access_field)){
+                $accessField = $this->config->access_field;
+                date_default_timezone_set('Europe/Rome');
+                $user->$accessField = date('Y-m-d H:i:s', time());;
+                $user->save();
+            }
             return true;
         }
 
@@ -88,7 +96,7 @@ class UserAuthenticator
 
 
 
-    public function register($username, $password=null, $password_length=6)
+    public function register($username, $password = null, $password_length = 6)
     {
         // Check if username is already taken
         if ($this->getUserByUsername($username)) {
@@ -129,10 +137,12 @@ class UserAuthenticator
     {
         if ($this->isLoggedIn()) {
             if (isset($_SESSION['user_id'])) {
-                $user = $this->getUserById($_SESSION['user_id']);
-                $hashField = $this->config->hash_field;
-                $user->$hashField = "";
-                $user->save();
+                if(isset($this->config->hash_field)) {
+                    $user = $this->getUserById($_SESSION['user_id']);
+                    $hashField = $this->config->hash_field;
+                    $user->$hashField = "";
+                    $user->save();
+                }
             }
             session_unset();
             session_destroy();
