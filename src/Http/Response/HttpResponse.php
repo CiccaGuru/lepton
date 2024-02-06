@@ -6,9 +6,10 @@ class HttpResponse
 {
 
     public function __construct(
+        public $statusCode,
         public $body = '',
-        public $headers = array(),
-        public $statusCode)
+        public $headers = array()
+        )
     {
     }
 
