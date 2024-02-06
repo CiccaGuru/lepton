@@ -12,13 +12,6 @@ class ACFMiddleware extends BaseAccessControlMiddleware
 {
     public string $level_field;
 
-    public const CIRCOLO = 1;
-    public const FEDERAZIONE = 2;
-    public const REGIONALE = 4;
-    public const NAZIONALE = 8;
-
-
-
     protected function handle(mixed ...$middlewareParams): HttpResponse|Request
     {
         $this->level_field = $middlewareParams["level_field"] ?? "level";
@@ -31,17 +24,17 @@ class ACFMiddleware extends BaseAccessControlMiddleware
     {
 
         if($modifier == LoginRequired::class) {
-
             $level = $params[0] ?? 1;
+
             $authenticator = new \Lepton\Authenticator\UserAuthenticator();
             $loggedIn = $authenticator->isLoggedIn();
-            if(! $loggedIn){
+            if(! $loggedIn) {
                 return false;
             }
             $user = $authenticator->getLoggedUser();
             $splitted = explode("__", $this->level_field);
             $user_level = $user;
-            foreach($splitted as $part){
+            foreach($splitted as $part) {
                 $user_level = $user_level->$part;
             }
             return ($user_level >= $level);
