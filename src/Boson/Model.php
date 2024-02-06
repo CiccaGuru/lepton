@@ -337,6 +337,12 @@ abstract class Model
                 $this->$property = $value;
             }
         } elseif (array_key_exists($property, $this->foreignKeys)) {
+            if(is_null($value)){
+                $this->$property = $value;
+                $this->editedFields[] = $property;
+                $this->editedFields = array_unique($this->editedFields);
+                return;
+            }
             if (is_int($value)) {
                 $value = ($this->foreignKeys[$property]->parent)::get($value);
             }
@@ -401,21 +407,39 @@ abstract class Model
 
 
 
+
+    /**
+     * Return the primary key value
+     * @return mixed The primary key value
+     */
     final public function getPk()
     {
         return $this->{$this->pkName};
     }
 
+
+    /**
+     * Return the primary key name
+     * @return string The primary key name
+     */
     final public function getPkName()
     {
         return $this->pkName;
     }
 
+
+    /**
+     * Return the table name
+     * @return string The table name
+     */
     final public static function getTableName()
     {
         return static::$tableName;
     }
 
+    /** Return the list of columns
+     * @return array The list of columns
+     */
     final public function getColumnList(): array
     {
         foreach ($this->db_columns as $column) {
@@ -424,6 +448,12 @@ abstract class Model
 
         return $columns;
     }
+
+    /**
+     * Return the column name for a given field
+     * @param string $field The field name
+     * @return string The column name
+     */
 
     final public function getColumnFromField(string $field): string
     {
@@ -541,27 +571,37 @@ abstract class Model
         return;
     }
 
+
+    /**
+     * Return the name of the column for a given field
+     * @param string $field The field name
+     * @return string The column name
+     */
     private function getFieldName($field): string
     {
         return $this->db_columns[$field];
-        /*if (array_key_exists($field, $this->fields)) {
-            return $field;
-        } elseif (array_key_exists($field, $this->foreignKeys)) {
-            return $field."_".($this->$field)->getPkName();
-        }*/
     }
+
+
+    /**
+     * Return the value of a field
+     *  @param string $field The field name
+     * @return mixed The field value
+     *
+     */
 
     private function getFieldValues($field): mixed
     {
         if (array_key_exists($field, $this->fields)) {
             return $this->$field;
         } elseif (array_key_exists($field, $this->foreignKeys)) {
+            if(is_null($this->$field)) return NULL;
             return ($this->$field)->getPk();
         }
     }
 
     /**
-     * Get a unique result from the database.
+     * Get a unique result from the database. If no result is found, throw an exception.
      *
      * @param mixed $filters
      * The filters to be applied.  If $filters has only one element and no key, it is
@@ -570,8 +610,6 @@ abstract class Model
      * @return Model
      * The model fulfilling the filters
      */
-
-
     public static function get(...$filters): Model|bool
     {
         if ((count($filters) == 1) && array_key_first($filters)  == 0) {
@@ -613,7 +651,10 @@ abstract class Model
         return $querySet;
     }
 
-
+    /**
+     * Clear the array of edited fields
+     * @return void
+     */
     final public function clearEditedFields()
     {
         $this->editedFields = array();
