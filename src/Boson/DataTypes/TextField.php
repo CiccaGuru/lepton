@@ -8,9 +8,11 @@ class TextField extends Field{
   private $max_length;
   private $nullable;
 
-  public function __construct($max_length = 128, $nullable = false ){
+  public function __construct($max_length = 128, $nullable = false, ...$options ){
     $this->max_length = $max_length;
     $this->nullable = $nullable;
+     parent::__construct(...$options);
+
   }
 
   public function validate($value){
