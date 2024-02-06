@@ -13,6 +13,11 @@ abstract class BaseController
     protected array $default_parameters;
     protected array $custom_filters;
     public string $baseLink;
+
+    public function url($string){
+        return Application::getDir()."/".$string;
+    }
+
     public function render(string $view, array $parameters = array(), $headers = array())
     {
         Liquid::set('INCLUDE_SUFFIX', 'html');
@@ -35,11 +40,13 @@ abstract class BaseController
             }
         }, $parameters);
 
+
         $authenticator = new UserAuthenticator();
 
 
         $parameters["page"] = $_SERVER["REQUEST_URI"];
         $parameters["logged_user"] = $authenticator->getLoggedUser();
+        $parameters["base_link"] = $this->baseLink;
 
         if (isset($this->default_parameters)) {
             $parameters = array_merge($parameters, $this->default_parameters);
