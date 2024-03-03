@@ -1,6 +1,6 @@
 <?php
 
-namespace Lepton\Authenticator;
+namespace Lepton\Authenticator\AccessControlAttributes;
 
 #[\Attribute]
 class PermissionRequired
