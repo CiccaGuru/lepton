@@ -622,9 +622,10 @@ abstract class Model
 
         $result = $querySet->do();
         if ($result->count() == 0) {
-            return false;//throw new \Exception("No result found");
+            //throw new \Exception("No result found");
+            return false;
         } elseif ($result->count() > 1) {
-            throw new \Exception("Only one result allowed when using get, multiple obtained");
+            throw new Exceptions\MultipleResultsException("Only one result allowed when using get, multiple obtained");
         } else {
             foreach ($result as $model) {
                 return $model;
