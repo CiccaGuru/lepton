@@ -5,16 +5,13 @@ namespace Lepton\Boson\DataTypes;
 class JSONField extends Field{
 
 
-  private $nullable;
-
-  public function __construct($nullable = false, ...$options ){
-    $this->nullable = $nullable;
+  public function __construct(...$options ){
      parent::__construct(...$options);
 
   }
 
   public function validate($value){
-    return true;
-    if(is_null($value) && (!$this->nullable)) return false;
+    if(!is_array(json_decode($value, true))) return false;
+    return parent::validate($value);
   }
 }

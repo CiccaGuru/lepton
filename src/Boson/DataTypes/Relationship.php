@@ -14,6 +14,6 @@ class Relationship extends Field
 
     public function validate($value)
     {
-        return true;
+        return parent::validate($value);
     }
 }

@@ -14,6 +14,6 @@ class ReverseRelation extends Relationship
 
     public function validate($value)
     {
-        return true;
+        return parent::validate($value);
     }
 }

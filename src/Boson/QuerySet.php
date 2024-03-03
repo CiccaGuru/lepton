@@ -537,7 +537,11 @@ class QuerySet implements \Iterator, \ArrayAccess
         return $return;
     }
 
-
+    /**
+     * Builds the modifiers for the query set.
+     *
+     * @return array An array containing the ORDER BY clause and the join conditions.
+     */
     private function buildModifiers()
     {
         $order_by = $this->modifiers["ORDER BY"];
@@ -570,17 +574,6 @@ class QuerySet implements \Iterator, \ArrayAccess
         }
             $clause = implode(", ", $conditions);
             return [$clause, $join];
-        /*
-        return implode(
-            ", ",
-            array_map(function ($v, $k) {
-                if (is_array($v)) {
-                    return $k. " ".implode(', ', $v);
-                } else {
-                    return $k. " ".$v;
-                }
-            }, $modifiers, array_keys($modifiers))
-        );*/
       }
 
 
@@ -661,7 +654,6 @@ class QuerySet implements \Iterator, \ArrayAccess
         $column = array_pop($match);
 
         // Now match has only joins
-
         $join = array();
         foreach ($match as $k) {
             if($last->isForeignKey($k)) {

@@ -14,6 +14,7 @@ class ForeignKey extends Relationship
 
     public function validate($value)
     {
-        return true;
+        if (!is_a($value, $this->parent)) return false;
+        return parent::validate($value);
     }
 }

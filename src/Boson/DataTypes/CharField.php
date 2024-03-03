@@ -12,8 +12,7 @@ class CharField extends Field
 
     public function validate($value)
     {
-        if(is_null($value) && (!$this->null)) return false;
         if(strlen($value) > $this->max_length) return false;
-        return true;
+        return parent::validate($value);
     }
 }

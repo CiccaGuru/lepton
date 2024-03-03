@@ -25,7 +25,6 @@ class Field{
      protected string $help_text        = "",
      protected bool   $primary_key      = false,
      protected bool   $unique           = false,
-     protected string $unique_for       = "",
      protected string $verbose_name     = "",
      protected array  $validators       = array()
     )
@@ -34,10 +33,22 @@ class Field{
   }
 
 
-  protected function check(){
+  protected function validate($value){
+    if (is_null($value) && (!$this->null)) return false;
+    if (empty($value) && (!$this->blank)) return false;
+    if (!empty($this->choices) && !in_array($value, $this->choices)) return false;
+    if (!empty($this->validators)) return $this->validate_with_validators($value);
+
     return true;
   }
 
+
+  private function validate_with_validators($value){
+    foreach($this->validators as $validator){
+      if (!$validator($value)) return false;
+    }
+    return true;
+  }
 
 
 

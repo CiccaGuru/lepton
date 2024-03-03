@@ -14,6 +14,7 @@ class ManyToMany extends Relationship
 
     public function validate($value)
     {
-        return true;
+        if (!is_a($value, $this->child)) return false;
+        return parent::validate($value);
     }
 }
