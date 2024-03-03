@@ -5,8 +5,8 @@ namespace Lepton\Middleware;
 use Lepton\Authenticator\AccessControlAttributes\{LoginRequired, AbstractAccessControlAttribute};
 use Lepton\Core\Application;
 use Lepton\Http\Request;
-use Lepton\Routing\Match\{BaseMatch, MatchRoute};
-use Lepton\Http\Response\{SuccessResponse, HttpResponse, RedirectResponse, PermissionDeniedRedirectResponse};
+use Lepton\Routing\Match\MatchRoute;
+use Lepton\Http\Response\{HttpResponse, RedirectResponse};
 
 
 class BaseAccessControlMiddleware extends AbstractMiddleware

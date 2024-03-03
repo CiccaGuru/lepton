@@ -2,12 +2,6 @@
 
 namespace Lepton\Routing;
 
-use Lepton\Exceptions\ControllerNotFoundException;
-use Lepton\Http\Request;
-use Lepton\Http\{HttpResponse, RedirectResponse};
-use Lepton\Authenticator\{UserAuthenticator, LoginRequired};
-use Lepton\Core\Application;
-
 class UrlResolver
 {
 

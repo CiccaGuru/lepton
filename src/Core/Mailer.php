@@ -3,7 +3,6 @@
 namespace Lepton\Core;
 
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
 use Lepton\Core\Application;
 
 class Mailer

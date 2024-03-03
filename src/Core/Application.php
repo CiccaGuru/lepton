@@ -3,10 +3,8 @@
 namespace Lepton\Core;
 
 use Lepton\Core\Handler\AbstractHandler;
-use Lepton\Core\Handler\BaseHandler;
 use Lepton\Http\Request;
 use Lepton\Http\Response\{FileResponse, HttpResponse};
-use Lepton\Routing\Route;
 use Whoops;
 
 class Application

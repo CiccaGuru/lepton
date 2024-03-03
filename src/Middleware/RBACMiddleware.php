@@ -5,10 +5,9 @@ namespace Lepton\Middleware;
 use Lepton\Authenticator\AccessControlAttributes\LoginRequired;
 use Lepton\Authenticator\UserAuthenticator;
 use Lepton\Http\Request;
-use Lepton\Routing\Match\{BaseMatch, MatchRoute};
-use Lepton\Http\Response\{SuccessResponse, HttpResponse, RedirectResponse};
+use Lepton\Http\Response\HttpResponse;
 use Lepton\Middleware\BaseAccessControlMiddleware;
-use ReflectionClass;
+use Lepton\Authenticator\AccessControlAttributes\PermissionRequired;
 
 class RBACMiddleware extends BaseAccessControlMiddleware
 {

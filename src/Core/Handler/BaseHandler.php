@@ -7,7 +7,6 @@ use Lepton\Routing\Match\{BaseMatch, MatchRoute, Match404};
 use Lepton\Routing\UrlResolver;
 use Lepton\Core\Application;
 use Lepton\Exceptions;
-use Lepton\Controller\BaseController;
 
 class BaseHandler extends AbstractHandler
 {

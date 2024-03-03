@@ -63,9 +63,6 @@ class UserAuthenticator
 
     public function isLoggedIn()
     {
-        /*if (!isset($_SESSION['user_id']) || !isset($_SESSION['session_hash'])) {
-            return false;
-        }*/
 
         if (!isset($_SESSION['user_id'])) {
             return false;
