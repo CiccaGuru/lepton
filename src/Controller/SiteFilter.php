@@ -27,6 +27,10 @@ class SiteFilter
     }
 
 
+    public function query_count($query){
+        return $query->count();
+    }
+
     public function to_json($elements)
     {
         return json_encode($elements);
@@ -36,4 +40,5 @@ class SiteFilter
     {
         return htmlspecialchars($element);
     }
+
 }
