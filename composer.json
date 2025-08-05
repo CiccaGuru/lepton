@@ -1,6 +1,6 @@
 {
-    "name": "aisf/lepton",
-    "description": "AISF MVC Php Framework",
+    "name": "cicca/lepton",
+    "description": "MVC Php Framework. Fork of aisf/lepton",
     "type": "package",
     "require": {
         "phpmailer/phpmailer": "^6.7",
