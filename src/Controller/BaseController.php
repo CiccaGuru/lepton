@@ -59,4 +59,6 @@ abstract class BaseController
     {
         return new RedirectResponse($url, $htmx, $parse);
     }
+
+    public function __construct(){}
 }

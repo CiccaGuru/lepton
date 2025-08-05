@@ -4,7 +4,7 @@ namespace Lepton\Boson;
 
 use Lepton\Exceptions;
 use Lepton\Boson\DataTypes;
-use Lepton\Boson\DataTypes\ReverseRelation;
+use Lepton\Boson\DataTypes\{ForeignKey, ReverseRelation};
 use Lepton\Core\Application;
 
 abstract class Model
@@ -212,6 +212,10 @@ abstract class Model
     final public function getRelationshipParentModel($prop): string
     {
         return $this->foreignKeys[$prop]->parent;
+    }
+
+    final public function getParent($prop): ForeignKey{
+        return $this->foreignKeys[$prop];
     }
 
     final public function getChild($prop): ReverseRelation

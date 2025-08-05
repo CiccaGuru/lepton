@@ -63,7 +63,7 @@ class LeptonServer
 
         echo "\e[32mWatching in ".$this->sass_directory."\e[39m".PHP_EOL.PHP_EOL;
 
-        echo "\e[33mStarting PHP WebServer (ONLY FOR DEVELOPMENT) at http://127.0.0.1:5555\e[39m".PHP_EOL.PHP_EOL;
+        echo "\e[33mStarting PHP WebServer (ONLY FOR DEVELOPMENT)\e[39m".PHP_EOL.PHP_EOL;
 
         //Start the PHP built-in web server
         $command = sprintf('php -S localhost:5555 -t %s %s/webserver.php', $this->application, $this->application);

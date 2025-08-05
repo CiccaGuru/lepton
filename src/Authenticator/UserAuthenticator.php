@@ -51,8 +51,8 @@ class UserAuthenticator
             }
             if(isset($this->config->access_field)){
                 $accessField = $this->config->access_field;
-                date_default_timezone_set('Europe/Rome');
-                $user->$accessField = date('Y-m-d H:i:s', time());;
+                date_default_timezone_set('Etc/UTC');
+                $user->$accessField = date('Y-m-d H:i:s', time());
                 $user->save();
             }
             return true;
@@ -76,6 +76,12 @@ class UserAuthenticator
             return false;
         }
 
+        if(isset($this->config->active_field)){
+            $accessField = $this->config->active_field;
+            date_default_timezone_set('Etc/UTC');
+            $user->$accessField = date('Y-m-d H:i:s', time());
+            $user->save();
+        }
         return true;
     }
 

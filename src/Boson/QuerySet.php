@@ -467,27 +467,34 @@ class QuerySet implements \Iterator, \ArrayAccess
         $query = sprintf(" SELECT %s FROM %s ", implode(", ", $selectColumns), $tableName);
 
         $values = array();
-        $join = array();
+        $join_m = array();
         $join_t = array();
+        $join = array();
 
         $modifiers = "";
 
         // it there are any ORDER BY, build the clause
         if (count($this->modifiers)> 0) {
-            list($modifiers, $join) = $this->buildModifiers();
+            list($modifiers, $join_m) = $this->buildModifiers();
         }
 
         // if there are any filters build WHERE clause
+        // echo "MODIFIERS";
+        // echo var_dump($this->filters)."<br/>";
         if (count($this->filters)> 0) {
             list($whereClause, $values, $join_t) = $this->buildWhereClause($this->filters);
         }
 
-        array_unshift($join_t, array("table" => $this->model::getTableName()));
-        array_unshift($join, array("table" => $this->model::getTableName()));
-        // build JOIN for One-To-Many and One-To-One relationships
-        $query .= " ".$this->buildJoin($join);
-        $query .= " ".$this->buildJoin($join_t);
 
+        $join = array_merge($join_t, $join_m);
+
+        // build JOIN for relationships
+        $query .= " ".$this->buildJoin($join);
+        
+        // if(str_contains($query, "event_voters")) {
+        //     echo print_r($join_t)."<br/>";
+        //     die($query);
+        // }
         if(count($this->filters)>0){
             $query .= sprintf(" WHERE %s ", $whereClause);
         }
@@ -497,7 +504,6 @@ class QuerySet implements \Iterator, \ArrayAccess
             $query .= sprintf(" ORDER BY %s", $modifiers);
         }
 
-       //if(strpos($query, "ORDER BY")) die (print_r($query));
         return array($query, $values);
     }
 
@@ -516,32 +522,28 @@ class QuerySet implements \Iterator, \ArrayAccess
 
     private function buildJoin(array $join)
     {
-        if (count($join) == 1) {
+        if (count($join) < 1) {
             return "";
         }
-        $join = array_values(array_unique($join, SORT_REGULAR));
+        // $join = array_values(array_unique($join, SORT_REGULAR));
 
-        $clause = array();
-        for ($i = 1; $i < count($join); $i++) {
-            $clause[] =  sprintf(
-                " %s ON %s.%s = %s.%s",
-                $join[$i]["table"],
-                $join[$i-1]["table"],
-                $join[$i]["column"],
-                $join[$i]["table"],
-                $join[$i]["column"]
-            );
-        }
-        $return = "JOIN ".implode(" JOIN ", $clause);
+        // $clause = array();
+        // for ($i = 1; $i < count($join); $i++) {
+        //     $clause[] =  sprintf(
+        //         " %s ON %s.%s = %s.%s",
+        //         $join[$i-1]["table"],
+        //         $join[$i-1]["table"],
+        //         $join[$i-1]["column"],
+        //         $join[$i-1]["table"],
+        //         $join[$i]["column"]
+        //     );
+        // }
+        $return = "JOIN ".implode(" JOIN ", $join);
 
         return $return;
     }
 
-    /**
-     * Builds the modifiers for the query set.
-     *
-     * @return array An array containing the ORDER BY clause and the join conditions.
-     */
+
     private function buildModifiers()
     {
         $order_by = $this->modifiers["ORDER BY"];
@@ -565,7 +567,7 @@ class QuerySet implements \Iterator, \ArrayAccess
             if (empty($parsed["join"])) {
                 $tableName = (new $this->model())->getTableName();
             } else {
-                $tableName = end($parsed["join"])["table"];
+                $tableName = $parsed["table"];
             }
 
             $conditions[$column] = sprintf("%s.%s %s", $tableName, $column, $method);
@@ -574,14 +576,27 @@ class QuerySet implements \Iterator, \ArrayAccess
         }
             $clause = implode(", ", $conditions);
             return [$clause, $join];
+        /*
+        return implode(
+            ", ",
+            array_map(function ($v, $k) {
+                if (is_array($v)) {
+                    return $k. " ".implode(', ', $v);
+                } else {
+                    return $k. " ".$v;
+                }
+            }, $modifiers, array_keys($modifiers))
+        );*/
       }
 
 
     private function buildWhereClause($filters)
     {
+        // echo "BEGIN------------<br/>";
         $where = "";
         $parameters = array();
         $join = array();
+
         foreach ($filters as $n => $filter) {
             foreach ($filter as $logic => $values) {
                 if ($n != 0) {
@@ -598,8 +613,9 @@ class QuerySet implements \Iterator, \ArrayAccess
                 $join = array_merge($join, $atomic[2]);
             }
         }
-
+        // echo "---------END <br/>";
         return array($where, $parameters, $join);
+        
     }
 
     private function buildAtomicWhereClause($filters)
@@ -614,11 +630,12 @@ class QuerySet implements \Iterator, \ArrayAccess
             $column = $lookup["column"];
             $condition = $lookup["condition"];
 
-            if (empty($lookup["join"])) {
-                $tableName = (new $this->model())->getTableName();
-            } else {
-                $tableName = end($lookup["join"])["table"];
-            }
+            // if (empty($lookup["join"])) {
+            //     $tableName = (new $this->model())->getTableName();
+            // } else {
+            //     $tableName = end($lookup["join"])["table"];
+            // }
+            $tableName = $lookup["table"];
             $map = $this->lookup_map[$condition];
 
             if ($value instanceof Model) {
@@ -633,7 +650,7 @@ class QuerySet implements \Iterator, \ArrayAccess
         }
 
         $clause = implode(" AND ", $conditions);
-
+      
         return array(0=>$clause, 1=> array_values($values), 2 => $join);
     }
 
@@ -654,32 +671,48 @@ class QuerySet implements \Iterator, \ArrayAccess
         $column = array_pop($match);
 
         // Now match has only joins
+
         $join = array();
         foreach ($match as $k) {
             if($last->isForeignKey($k)) {
-                $new= new ($last->getRelationshipParentModel($k))();
-
-                $join[] = array(
-                    "column"=> $last->getColumnFromField($k),
-                    "table" => $new->getTableName()
+                $new = new ($last->getRelationshipParentModel($k))();
+                $join[] = sprintf("%s ON %s.%s = %s.%s", 
+                    $new->getTableName(),
+                    $last->getTableName(),
+                    $last->getColumnFromField($k),
+                    $new->getTableName(),
+                    $new->getPkName()
                 );
             } elseif ($last->isReverseForeignKey($k)) {
                 $reverseForeignKey = $last->getChild($k);
                 $new = new ($reverseForeignKey->child);
-
-                $join[] = array(
-                    "column" => $new->getColumnFromField($reverseForeignKey->foreignKey),
-                    "table" => $new->getTableName()
+                $join[] = sprintf("%s ON %s.%s = %s.%s", 
+                    $new->getTableName(),
+                    $new->getTableName(),
+                    $new->getColumnFromField($reverseForeignKey->foreignKey),
+                    $last->getTableName(),
+                    $last->getPkName()
                 );
+
+                // $join[] = array(
+                //     "column" => $new->getColumnFromField($reverseForeignKey->foreignKey),
+                //     "table" => $new->getTableName()
+                // );
+
+                // print_r($join);
+                // die();
 
             } else {
                 throw new \Exception("$value is not a valid relationship description");
             }
             $last = $new;
         }
-
+        // echo "JOIN array";
+        // print_r($join);
+        // echo "<br/><br/>";
         return array(
           "column"    => $last->getColumnFromField($column),
+          "table"    => $last->getTableName(),
           "condition" => $condition,
           "join" => $join
         );
