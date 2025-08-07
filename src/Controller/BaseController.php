@@ -12,7 +12,7 @@ abstract class BaseController
 {
     protected array $default_parameters;
     protected array $custom_filters;
-    public string $baseLink;
+    public static string $baseLink = "";
 
     public function url($string){
         return Application::getDir()."/".$string;
@@ -46,7 +46,7 @@ abstract class BaseController
 
         $parameters["page"] = $_SERVER["REQUEST_URI"];
         $parameters["logged_user"] = $authenticator->getLoggedUser();
-        $parameters["base_link"] = $this->baseLink;
+        $parameters["base_link"] = self::$baseLink;
 
         if (isset($this->default_parameters)) {
             $parameters = array_merge($parameters, $this->default_parameters);
