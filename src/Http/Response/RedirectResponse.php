@@ -9,7 +9,7 @@ class RedirectResponse extends HttpResponse
     public $headers;
     public $body;
 
-    public function __construct($url, $htmx = false, $parse = true, $code = 302, $redirect_after = null )
+    public function __construct($url, $htmx = false, $parse = true,  $headers = array(), $code = 302, $redirect_after = null )
     {
         if ($this->isLocalUrl($url) && $parse) {
             $parsedUrl = Application::getDir()."/".$url;
@@ -17,9 +17,9 @@ class RedirectResponse extends HttpResponse
             $parsedUrl = $url;
         }
         if ($htmx) {
-            $headers = ["HX-Redirect" => $parsedUrl];
+            $headers["HX-Redirect"] = $parsedUrl ;
         } else {
-            $headers = [ "Location" => $parsedUrl ];
+            $headers["Location" ] =  $parsedUrl ;
         }
         if(isset($redirect_after)){
             $_SESSION["redirect_url"] = $redirect_after;

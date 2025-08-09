@@ -25,7 +25,7 @@ class BaseAccessControlMiddleware extends AbstractMiddleware
                         $this->request :
                         new RedirectResponse(
                             Application::getAuthConfig()->login_url,
-                            redirect_after: $this->request->url
+                            redirect_after: $this->request->url,
                         );
                 }
 

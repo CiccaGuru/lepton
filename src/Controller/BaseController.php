@@ -55,9 +55,9 @@ abstract class BaseController
     }
 
 
-    public function redirect($url, $htmx = false, $parse = true)
+    public function redirect($url, $htmx = false, $parse = true, $headers = array())
     {
-        return new RedirectResponse($url, $htmx, $parse);
+        return new RedirectResponse($url, $htmx, $parse, $headers);
     }
 
     public function __construct(){}

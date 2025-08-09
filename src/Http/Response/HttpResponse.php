@@ -15,6 +15,7 @@ class HttpResponse
 
 
     public function sendHeaders(){
+
         foreach ($this->headers as $key => $value) {
             header("$key: $value");
         }
